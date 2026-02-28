@@ -1,0 +1,70 @@
+export type TaskStatus = "open" | "in_progress" | "waiting" | "completed";
+export type TaskArea = "health" | "life_admin" | "career" | "relationships" | "fun";
+export type Confidence = "high" | "medium" | "low";
+export type UpdateKind = "merge" | "field_update" | "created";
+
+export interface TaskUpdate {
+  ts: string;
+  kind: UpdateKind;
+  summary: string;
+  raw_input?: string;
+}
+
+export interface Task {
+  id: string;
+  user_id: string;
+  title: string;
+  title_display: string;
+  title_normalized: string;
+  due_date: string | null;
+  duration: string | null;
+  current_steps: string | null;
+  status: TaskStatus;
+  next_steps: string | null;
+  notes: string | null;
+  updates: TaskUpdate[];
+  areas: TaskArea[] | null;
+  primary_area: TaskArea | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PendingAction {
+  id: string;
+  user_id: string;
+  candidate: TaskCandidate;
+  existing_task_id: string;
+  score: number;
+  created_at: string;
+}
+
+export interface TaskCandidate {
+  title_display: string;
+  title?: string;
+  title_normalized?: string;
+  due_date: string | null;
+  duration: string | null;
+  current_steps: string | null;
+  status: TaskStatus;
+  next_steps: string | null;
+  notes: string | null;
+  areas: TaskArea[];
+  primary_area: TaskArea | null;
+  confidence: Confidence;
+}
+
+export interface ParseResult {
+  created: Task[];
+  updated: Task[];
+  pending: PendingActionResult[];
+  unconfirmed: TaskCandidate[];
+  clarifications: string[];
+  error?: string;
+}
+
+export interface PendingActionResult {
+  pending_action_id: string;
+  candidate: TaskCandidate;
+  existing_task: Task;
+  score: number;
+}

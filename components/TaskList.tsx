@@ -4,9 +4,11 @@ import TaskCard from "./TaskCard";
 interface TaskListProps {
   tasks: Task[];
   onStatusChange?: (updated: Task) => void;
+  onEdit?: (updated: Task) => void;
+  onDelete?: (id: string) => void;
 }
 
-export default function TaskList({ tasks, onStatusChange }: TaskListProps) {
+export default function TaskList({ tasks, onStatusChange, onEdit, onDelete }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <p className="text-sm text-gray-400 italic">
@@ -18,7 +20,13 @@ export default function TaskList({ tasks, onStatusChange }: TaskListProps) {
   return (
     <div className="space-y-3">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} onStatusChange={onStatusChange} />
+        <TaskCard
+          key={task.id}
+          task={task}
+          onStatusChange={onStatusChange}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );

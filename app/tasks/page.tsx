@@ -70,6 +70,10 @@ export default function TasksPage() {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 
+  function handleDeleteTask(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+  }
+
   const filtered = tasks
     .filter((t) => {
       const statusMatch = statusFilter === "all" || t.status === statusFilter;
@@ -177,7 +181,12 @@ export default function TasksPage() {
             {filtered.length} of {tasks.length} task{tasks.length !== 1 ? "s" : ""}
           </p>
 
-          <TaskList tasks={filtered} onStatusChange={handleUpdatedTask} />
+          <TaskList
+            tasks={filtered}
+            onStatusChange={handleUpdatedTask}
+            onEdit={handleUpdatedTask}
+            onDelete={handleDeleteTask}
+          />
         </section>
       </main>
     </div>

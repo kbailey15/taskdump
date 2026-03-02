@@ -33,6 +33,13 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // Always let the PKCE callback through untouched — middleware must never
+  // redirect away before exchangeCodeForSession can run
+  if (pathname === "/auth/callback") {
+    return supabaseResponse;
+  }
+
   const isAuthRoute = pathname.startsWith("/auth");
 
   // Redirect unauthenticated users away from protected routes
@@ -43,7 +50,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && isAuthRoute && pathname !== "/auth/signout") {
+  const authBypass = new Set(["/auth/signout", "/auth/callback"]);
+  if (user && isAuthRoute && !authBypass.has(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/tasks";
     return NextResponse.redirect(url);

@@ -64,13 +64,13 @@ function VerifyPageInner() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              6-digit code
+              Login code
             </label>
             <input
               type="text"
               inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
+              autoComplete="one-time-code"
+              maxLength={8}
               required
               value={token}
               onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))}
@@ -83,7 +83,7 @@ function VerifyPageInner() {
 
           <button
             type="submit"
-            disabled={loading || token.length !== 6}
+            disabled={loading || token.length < 6}
             className="w-full bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Verifying…" : "Verify code"}

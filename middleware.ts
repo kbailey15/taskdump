@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages
-  const authBypass = new Set(["/auth/signout", "/auth/callback"]);
+  const authBypass = new Set(["/auth/signout", "/auth/callback", "/auth/verify"]);
   if (user && isAuthRoute && !authBypass.has(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/tasks";

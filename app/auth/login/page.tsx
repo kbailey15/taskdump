@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -15,32 +16,14 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || location.origin}/auth/callback`,
-      },
-    });
+    const { error } = await supabase.auth.signInWithOtp({ email });
 
     if (error) {
       setError(error.message);
+      setLoading(false);
     } else {
-      setSubmitted(true);
+      router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
     }
-    setLoading(false);
-  }
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full text-center p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Check your email</h1>
-          <p className="text-gray-600">
-            We sent a magic link to <strong>{email}</strong>. Click it to sign in.
-          </p>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -65,16 +48,14 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-red-600 text-sm">{error}</p>
-          )}
+          {error && <p className="text-red-600 text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Sending…" : "Send magic link"}
+            {loading ? "Sending…" : "Send login code"}
           </button>
         </form>
       </div>

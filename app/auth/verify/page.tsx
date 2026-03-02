@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function VerifyPage() {
+function VerifyPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -98,5 +98,13 @@ export default function VerifyPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-400 text-sm">Loading…</div>}>
+      <VerifyPageInner />
+    </Suspense>
   );
 }

@@ -38,6 +38,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [areaFilter, setAreaFilter] = useState<AreaFilter>("all");
+  const [dueTodayOnly, setDueTodayOnly] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,12 +75,15 @@ export default function TasksPage() {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const dueTodayCount = tasks.filter((t) => t.due_date === today).length;
+
   const filtered = tasks
     .filter((t) => {
       const statusMatch = statusFilter === "all" || t.status === statusFilter;
-      const areaMatch =
-        areaFilter === "all" || (t.areas ?? []).includes(areaFilter);
-      return statusMatch && areaMatch;
+      const areaMatch = areaFilter === "all" || (t.areas ?? []).includes(areaFilter);
+      const dueTodayMatch = !dueTodayOnly || t.due_date === today;
+      return statusMatch && areaMatch && dueTodayMatch;
     })
     .sort((a, b) => {
       if (a.due_date && b.due_date) return a.due_date < b.due_date ? -1 : 1;
@@ -174,6 +178,23 @@ export default function TasksPage() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Due today filter */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setDueTodayOnly((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  dueTodayOnly
+                    ? "bg-amber-500 text-white border-amber-500"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+                }`}
+              >
+                Due today
+                {dueTodayCount > 0 && (
+                  <span className={`ml-1 ${dueTodayOnly ? "opacity-70" : "opacity-50"}`}>{dueTodayCount}</span>
+                )}
+              </button>
             </div>
           </div>
 

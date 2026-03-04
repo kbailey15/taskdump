@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Task, TaskStatus, TaskArea } from "@/types";
+import DatePickerInput from "./DatePickerInput";
 
 const STATUSES: { value: TaskStatus; label: string }[] = [
   { value: "open", label: "Open" },
@@ -102,12 +103,7 @@ export default function EditTaskModal({ task, onSave, onClose }: EditTaskModalPr
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Due date</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <DatePickerInput value={dueDate} onChange={setDueDate} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>

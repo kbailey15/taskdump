@@ -1,4 +1,6 @@
 export type TaskStatus = "open" | "in_progress" | "waiting" | "completed";
+export type FilterItem = { id: string; label: string; hidden?: boolean };
+export type UserSettings = { custom_statuses: FilterItem[]; custom_areas: FilterItem[] };
 export type TaskArea = "health" | "life_admin" | "career" | "relationships" | "fun";
 export type Confidence = "high" | "medium" | "low";
 export type UpdateKind = "merge" | "field_update" | "created";

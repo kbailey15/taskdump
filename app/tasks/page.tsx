@@ -2,29 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Task, TaskStatus, TaskArea } from "@/types";
+import { Task, UserSettings } from "@/types";
 import TaskDumpInput from "@/components/TaskDumpInput";
 import TaskList from "@/components/TaskList";
-
-type StatusFilter = "all" | TaskStatus;
-type AreaFilter = "all" | TaskArea;
-
-const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "in_progress", label: "In progress" },
-  { value: "waiting", label: "Waiting" },
-  { value: "completed", label: "Done" },
-  { value: "all", label: "All" },
-];
-
-const AREA_FILTERS: { value: AreaFilter; label: string }[] = [
-  { value: "all", label: "All areas" },
-  { value: "health", label: "Health" },
-  { value: "life_admin", label: "Life admin" },
-  { value: "career", label: "Career" },
-  { value: "relationships", label: "Relationships" },
-  { value: "fun", label: "Fun" },
-];
 
 function filterPill(isActive: boolean) {
   return `text-xs px-2.5 py-1 rounded-full border transition-colors ${
@@ -36,10 +16,11 @@ function filterPill(isActive: boolean) {
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
-  const [areaFilter, setAreaFilter] = useState<AreaFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("open");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
   const [dueTodayOnly, setDueTodayOnly] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,12 +32,19 @@ export default function TasksPage() {
 
       if (user) {
         setEmail(user.email ?? null);
-        const { data } = await supabase
-          .from("tasks")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        setTasks((data as Task[]) ?? []);
+        const [tasksRes, settingsRes] = await Promise.all([
+          supabase
+            .from("tasks")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false }),
+          fetch("/api/settings"),
+        ]);
+        setTasks((tasksRes.data as Task[]) ?? []);
+        if (settingsRes.ok) {
+          const data: UserSettings = await settingsRes.json();
+          setSettings(data);
+        }
       }
       setLoading(false);
     }
@@ -75,13 +63,35 @@ export default function TasksPage() {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // Build filter arrays from settings, appending "All" at the end
+  const statusFilters: { id: string; label: string }[] = [
+    ...(settings?.custom_statuses.filter((s) => !s.hidden) ?? [
+      { id: "open", label: "Open" },
+      { id: "in_progress", label: "In progress" },
+      { id: "waiting", label: "Waiting" },
+      { id: "completed", label: "Done" },
+    ]),
+    { id: "all", label: "All" },
+  ];
+
+  const areaFilters: { id: string; label: string }[] = [
+    ...(settings?.custom_areas ?? [
+      { id: "health", label: "Health" },
+      { id: "life_admin", label: "Life admin" },
+      { id: "career", label: "Career" },
+      { id: "relationships", label: "Relationships" },
+      { id: "fun", label: "Fun" },
+    ]),
+    { id: "all", label: "All areas" },
+  ];
+
+  const today = new Date().toISOString().slice(0, 10);
   const dueTodayCount = tasks.filter((t) => t.due_date === today).length;
 
   const filtered = tasks
     .filter((t) => {
       const statusMatch = statusFilter === "all" || t.status === statusFilter;
-      const areaMatch = areaFilter === "all" || (t.areas ?? []).includes(areaFilter);
+      const areaMatch = areaFilter === "all" || (t.areas ?? []).includes(areaFilter as never);
       const dueTodayMatch = !dueTodayOnly || t.due_date === today;
       return statusMatch && areaMatch && dueTodayMatch;
     })
@@ -93,14 +103,16 @@ export default function TasksPage() {
     });
 
   // Count helpers — each dimension filters against the OTHER active filter
-  function statusCount(s: StatusFilter) {
-    const base = areaFilter === "all" ? tasks : tasks.filter((t) => (t.areas ?? []).includes(areaFilter));
-    return s === "all" ? base.length : base.filter((t) => t.status === s).length;
+  function statusCount(id: string) {
+    const base =
+      areaFilter === "all" ? tasks : tasks.filter((t) => (t.areas ?? []).includes(areaFilter as never));
+    return id === "all" ? base.length : base.filter((t) => t.status === id).length;
   }
 
-  function areaCount(a: AreaFilter) {
-    const base = statusFilter === "all" ? tasks : tasks.filter((t) => t.status === statusFilter);
-    return a === "all" ? base.length : base.filter((t) => (t.areas ?? []).includes(a)).length;
+  function areaCount(id: string) {
+    const base =
+      statusFilter === "all" ? tasks : tasks.filter((t) => t.status === statusFilter);
+    return id === "all" ? base.length : base.filter((t) => (t.areas ?? []).includes(id as never)).length;
   }
 
   if (loading) {
@@ -119,6 +131,13 @@ export default function TasksPage() {
           {email && (
             <span className="text-xs text-gray-500 hidden sm:block">{email}</span>
           )}
+          <a
+            href="/settings"
+            className="text-xs text-gray-500 hover:text-gray-800"
+            title="Settings"
+          >
+            ⚙
+          </a>
           <form action="/auth/signout" method="POST">
             <button
               type="submit"
@@ -140,17 +159,17 @@ export default function TasksPage() {
           <div className="mb-4 space-y-2">
             {/* Status filters */}
             <div className="flex gap-1 flex-wrap">
-              {STATUS_FILTERS.map(({ value, label }) => {
-                const count = statusCount(value);
+              {statusFilters.map(({ id, label }) => {
+                const count = statusCount(id);
                 return (
                   <button
-                    key={value}
-                    onClick={() => setStatusFilter(value)}
-                    className={filterPill(statusFilter === value)}
+                    key={id}
+                    onClick={() => setStatusFilter(id)}
+                    className={filterPill(statusFilter === id)}
                   >
                     {label}
                     {count > 0 && (
-                      <span className={`ml-1 ${statusFilter === value ? "opacity-70" : "opacity-50"}`}>
+                      <span className={`ml-1 ${statusFilter === id ? "opacity-70" : "opacity-50"}`}>
                         {count}
                       </span>
                     )}
@@ -161,17 +180,17 @@ export default function TasksPage() {
 
             {/* Area filters */}
             <div className="flex gap-1 flex-wrap">
-              {AREA_FILTERS.map(({ value, label }) => {
-                const count = areaCount(value);
+              {areaFilters.map(({ id, label }) => {
+                const count = areaCount(id);
                 return (
                   <button
-                    key={value}
-                    onClick={() => setAreaFilter(value)}
-                    className={filterPill(areaFilter === value)}
+                    key={id}
+                    onClick={() => setAreaFilter(id)}
+                    className={filterPill(areaFilter === id)}
                   >
                     {label}
                     {count > 0 && (
-                      <span className={`ml-1 ${areaFilter === value ? "opacity-70" : "opacity-50"}`}>
+                      <span className={`ml-1 ${areaFilter === id ? "opacity-70" : "opacity-50"}`}>
                         {count}
                       </span>
                     )}

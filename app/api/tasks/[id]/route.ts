@@ -4,9 +4,6 @@ import { TaskStatus, TaskArea } from "@/types";
 import { cleanTitle, normalizeTitle } from "@/lib/normalize";
 import { appendUpdate } from "@/lib/task-utils";
 
-const VALID_STATUSES: TaskStatus[] = ["open", "in_progress", "waiting", "completed"];
-const VALID_AREAS: TaskArea[] = ["health", "life_admin", "career", "relationships", "fun"];
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -38,16 +35,6 @@ export async function PATCH(
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  // Validate status if provided
-  if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  }
-
-  // Validate areas if provided
-  if (body.areas !== undefined && !body.areas.every((a) => VALID_AREAS.includes(a))) {
-    return NextResponse.json({ error: "Invalid area" }, { status: 400 });
   }
 
   // Fetch existing task to append update log

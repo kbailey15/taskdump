@@ -10,11 +10,11 @@ type StatusFilter = "all" | TaskStatus;
 type AreaFilter = "all" | TaskArea;
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
   { value: "open", label: "Open" },
   { value: "in_progress", label: "In progress" },
   { value: "waiting", label: "Waiting" },
   { value: "completed", label: "Done" },
+  { value: "all", label: "All" },
 ];
 
 const AREA_FILTERS: { value: AreaFilter; label: string }[] = [
@@ -36,7 +36,7 @@ function filterPill(isActive: boolean) {
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const [areaFilter, setAreaFilter] = useState<AreaFilter>("all");
   const [dueTodayOnly, setDueTodayOnly] = useState(false);
   const [email, setEmail] = useState<string | null>(null);

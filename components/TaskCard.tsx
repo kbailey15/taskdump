@@ -59,6 +59,7 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
   const [showEdit, setShowEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
 
   async function cycleStatus() {
     const next =
@@ -89,6 +90,16 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
     } else {
       setDeleting(false);
       setConfirmDelete(false);
+    }
+  }
+
+  async function dismissAsNotImportant(taskId: string) {
+    setDismissing(true);
+    const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    if (res.ok) {
+      onDelete?.(taskId);
+    } else {
+      setDismissing(false);
     }
   }
 
@@ -146,40 +157,51 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3 mt-3 pt-2 border-t border-gray-50">
-          {confirmDelete ? (
-            <>
-              <span className="text-xs text-gray-500">Delete this task?</span>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-              >
-                {deleting ? "Deleting…" : "Yes, delete"}
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="text-xs text-gray-400 hover:text-gray-600"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setShowEdit(true)}
-                className="text-xs text-gray-400 hover:text-gray-700"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="text-xs text-gray-400 hover:text-red-600"
-              >
-                Delete
-              </button>
-            </>
-          )}
+        <div className="mt-3 pt-2 border-t border-gray-50 space-y-2">
+          <div className="flex items-center justify-end gap-3">
+            {confirmDelete ? (
+              <>
+                <span className="text-xs text-gray-500">Delete this task?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Yes, delete"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="text-xs text-gray-400 hover:text-gray-700"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-gray-400 hover:text-red-600"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => dismissAsNotImportant(task.id)}
+              disabled={dismissing}
+              className="text-xs text-gray-300 hover:text-gray-500 italic disabled:opacity-50"
+            >
+              {dismissing ? "Dismissing…" : "Not actually important"}
+            </button>
+          </div>
         </div>
       </div>
 

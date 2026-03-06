@@ -5,6 +5,13 @@ import { createClient } from "@/lib/supabase/client";
 import AppShell from "@/components/AppShell";
 import { DailyStructure, DayOfWeek } from "@/types";
 
+// Each hour row is ROW_HEIGHT px tall — all time→px math uses this single constant
+const ROW_HEIGHT = 80;
+
+function minuteToPx(minute: number): number {
+  return (minute / 60) * ROW_HEIGHT;
+}
+
 function formatHour(hour: number): string {
   if (hour === 0) return "12 AM";
   if (hour < 12) return `${hour} AM`;
@@ -27,8 +34,8 @@ function formatTime(time: string): string {
 
 interface CalendarEvent {
   label: string;
-  minute: number; // 0–1439
-  color: string; // tailwind bg class
+  minute: number;
+  color: string;
 }
 
 export default function TodayPage() {
@@ -50,6 +57,7 @@ export default function TodayPage() {
       if (res.ok) {
         const data = await res.json();
         const ds: DailyStructure | null = data.daily_structure ?? null;
+        // getDay() uses browser local timezone — correct for a per-user calendar
         const todayDay = new Date().getDay() as DayOfWeek;
         const built: CalendarEvent[] = [];
 
@@ -85,13 +93,10 @@ export default function TodayPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Scroll current hour into view once loaded
   useEffect(() => {
     if (loading || !scrollRef.current) return;
-    const currentHour = Math.floor(currentMinute / 60);
-    const rowHeight = 80;
-    const scrollTarget = currentHour * rowHeight - 120;
-    scrollRef.current.scrollTop = Math.max(0, scrollTarget);
+    // Scroll so current hour is ~120px from the top of the visible area
+    scrollRef.current.scrollTop = Math.max(0, minuteToPx(currentMinute) - 120);
   }, [loading, currentMinute]);
 
   const today = new Date().toLocaleDateString(undefined, {
@@ -116,53 +121,58 @@ export default function TodayPage() {
           <p className="text-xs text-gray-500 mt-0.5">{today}</p>
         </div>
 
+        {/* Fix 1: grid has explicit height = 24 * ROW_HEIGHT so absolute children
+            are positioned within the full scroll content, not just the visible box */}
         <div
           ref={scrollRef}
           className="relative bg-white border border-gray-200 rounded-lg overflow-auto"
-          style={{ maxHeight: "calc(100vh - 200px)" }}
+          style={{ maxHeight: `calc(100vh - 200px)` }}
         >
-          {/* Daily structure events */}
-          {events.map((event) => (
-            <div
-              key={event.label}
-              className="absolute left-16 right-0 z-10 pointer-events-none"
-              style={{ top: `calc(${(event.minute / 1440) * 100}% - 1px)` }}
-            >
-              <div className="flex items-center gap-1.5 pl-2">
-                <div className={`h-px flex-shrink-0 w-2 ${event.color}`} />
-                <span
-                  className={`text-xs text-white font-medium px-1.5 py-0.5 rounded ${event.color}`}
-                >
-                  {event.label}
-                </span>
-              </div>
-            </div>
-          ))}
-
-          {/* Current time indicator */}
           <div
-            className="absolute left-0 right-0 z-20 pointer-events-none"
-            style={{ top: `${(currentMinute / 1440) * 100}%` }}
+            className="relative"
+            style={{ height: `${24 * ROW_HEIGHT}px` }}
           >
-            <div className="flex items-center">
-              <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 flex-shrink-0" />
-              <div className="flex-1 h-px bg-red-500" />
-            </div>
-          </div>
-
-          {/* Hour rows */}
-          {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
-            <div
-              key={hour}
-              className="flex border-b border-gray-100 last:border-b-0"
-              style={{ minHeight: "80px" }}
-            >
-              <div className="w-16 flex-shrink-0 px-3 pt-2">
-                <span className="text-xs text-gray-400">{formatHour(hour)}</span>
+            {/* Daily structure events — px-based top */}
+            {events.map((event) => (
+              <div
+                key={event.label}
+                className="absolute left-16 right-0 z-10 pointer-events-none"
+                style={{ top: `${minuteToPx(event.minute)}px` }}
+              >
+                <div className="flex items-center gap-1.5 pl-2">
+                  <div className={`h-px w-2 flex-shrink-0 ${event.color}`} />
+                  <span className={`text-xs text-white font-medium px-1.5 py-0.5 rounded ${event.color}`}>
+                    {event.label}
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 border-l border-gray-100" />
+            ))}
+
+            {/* Current time indicator — px-based top */}
+            <div
+              className="absolute left-0 right-0 z-20 pointer-events-none"
+              style={{ top: `${minuteToPx(currentMinute)}px` }}
+            >
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 flex-shrink-0" />
+                <div className="flex-1 h-px bg-red-500" />
+              </div>
             </div>
-          ))}
+
+            {/* Hour rows — stacked to fill exactly 24 * ROW_HEIGHT */}
+            {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
+              <div
+                key={hour}
+                className="flex border-b border-gray-100 last:border-b-0"
+                style={{ height: `${ROW_HEIGHT}px` }}
+              >
+                <div className="w-16 flex-shrink-0 px-3 pt-2">
+                  <span className="text-xs text-gray-400">{formatHour(hour)}</span>
+                </div>
+                <div className="flex-1 border-l border-gray-100" />
+              </div>
+            ))}
+          </div>
         </div>
       </main>
     </AppShell>

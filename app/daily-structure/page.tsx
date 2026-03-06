@@ -18,41 +18,24 @@ const DAYS: { label: string; short: string; value: DayOfWeek }[] = [
 const WEEKDAYS: DayOfWeek[] = [1, 2, 3, 4, 5];
 const ALL_DAYS: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6];
 
-function defaultItem(time: string): DailyStructureItem {
-  return { time, days: WEEKDAYS };
-}
-
+// Fix 3: editor takes enabled + value separately so toggling off never discards state
 interface StructureItemEditorProps {
   label: string;
-  value: DailyStructureItem | null;
-  defaultTime: string;
-  onChange: (val: DailyStructureItem | null) => void;
+  enabled: boolean;
+  value: DailyStructureItem;
+  onToggle: () => void;
+  onChange: (val: DailyStructureItem) => void;
 }
 
-function StructureItemEditor({ label, value, defaultTime, onChange }: StructureItemEditorProps) {
-  const enabled = value !== null;
-
-  function handleToggleEnabled() {
-    onChange(enabled ? null : defaultItem(defaultTime));
-  }
-
-  function handleTimeChange(time: string) {
-    if (!value) return;
-    onChange({ ...value, time });
-  }
+function StructureItemEditor({ label, enabled, value, onToggle, onChange }: StructureItemEditorProps) {
+  const noDaysSelected = enabled && value.days.length === 0;
 
   function handleDayToggle(day: DayOfWeek) {
-    if (!value) return;
     const has = value.days.includes(day);
     const next = has
       ? value.days.filter((d) => d !== day)
-      : [...value.days, day].sort((a, b) => a - b);
-    onChange({ ...value, days: next as DayOfWeek[] });
-  }
-
-  function handleQuickSelect(days: DayOfWeek[]) {
-    if (!value) return;
-    onChange({ ...value, days });
+      : ([...value.days, day].sort((a, b) => a - b) as DayOfWeek[]);
+    onChange({ ...value, days: next });
   }
 
   return (
@@ -64,7 +47,7 @@ function StructureItemEditor({ label, value, defaultTime, onChange }: StructureI
           <button
             role="switch"
             aria-checked={enabled}
-            onClick={handleToggleEnabled}
+            onClick={onToggle}
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
               enabled ? "bg-gray-900" : "bg-gray-200"
             }`}
@@ -78,14 +61,14 @@ function StructureItemEditor({ label, value, defaultTime, onChange }: StructureI
         </label>
       </div>
 
-      {enabled && value && (
+      {enabled && (
         <>
           <div className="flex items-center gap-3">
             <label className="text-xs text-gray-500 w-10">Time</label>
             <input
               type="time"
               value={value.time}
-              onChange={(e) => handleTimeChange(e.target.value)}
+              onChange={(e) => onChange({ ...value, time: e.target.value })}
               className="text-sm border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:border-gray-400"
             />
           </div>
@@ -95,13 +78,13 @@ function StructureItemEditor({ label, value, defaultTime, onChange }: StructureI
               <span className="text-xs text-gray-500">Days</span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleQuickSelect(WEEKDAYS)}
+                  onClick={() => onChange({ ...value, days: WEEKDAYS })}
                   className="text-xs text-gray-400 hover:text-gray-700 underline"
                 >
                   Weekdays
                 </button>
                 <button
-                  onClick={() => handleQuickSelect(ALL_DAYS)}
+                  onClick={() => onChange({ ...value, days: ALL_DAYS })}
                   className="text-xs text-gray-400 hover:text-gray-700 underline"
                 >
                   Every day
@@ -109,24 +92,28 @@ function StructureItemEditor({ label, value, defaultTime, onChange }: StructureI
               </div>
             </div>
             <div className="flex gap-1.5">
-              {DAYS.map(({ short, value: day }) => {
+              {DAYS.map(({ short, label: dayLabel, value: day }) => {
                 const active = value.days.includes(day);
                 return (
                   <button
                     key={day}
                     onClick={() => handleDayToggle(day)}
+                    title={dayLabel}
                     className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
                       active
                         ? "bg-gray-900 text-white"
                         : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}
-                    title={DAYS.find((d) => d.value === day)?.label}
                   >
                     {short}
                   </button>
                 );
               })}
             </div>
+            {/* Fix 2: warn when no days selected */}
+            {noDaysSelected && (
+              <p className="text-xs text-amber-600">Select at least one day.</p>
+            )}
           </div>
         </>
       )}
@@ -137,8 +124,13 @@ function StructureItemEditor({ label, value, defaultTime, onChange }: StructureI
 export default function DailyStructurePage() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [wakeUp, setWakeUp] = useState<DailyStructureItem | null>(null);
-  const [sleep, setSleep] = useState<DailyStructureItem | null>(null);
+
+  // Fix 3: keep item state separate from enabled flag so toggling never discards settings
+  const [wakeUpEnabled, setWakeUpEnabled] = useState(false);
+  const [wakeUp, setWakeUp] = useState<DailyStructureItem>({ time: "07:00", days: WEEKDAYS });
+  const [sleepEnabled, setSleepEnabled] = useState(false);
+  const [sleep, setSleep] = useState<DailyStructureItem>({ time: "22:00", days: WEEKDAYS });
+
   const [saveMsg, setSaveMsg] = useState("");
 
   useEffect(() => {
@@ -153,8 +145,14 @@ export default function DailyStructurePage() {
       if (res.ok) {
         const data = await res.json();
         const ds: DailyStructure | null = data.daily_structure ?? null;
-        setWakeUp(ds?.wake_up ?? null);
-        setSleep(ds?.sleep ?? null);
+        if (ds?.wake_up) {
+          setWakeUpEnabled(true);
+          setWakeUp(ds.wake_up);
+        }
+        if (ds?.sleep) {
+          setSleepEnabled(true);
+          setSleep(ds.sleep);
+        }
       }
       setLoading(false);
     }
@@ -162,10 +160,21 @@ export default function DailyStructurePage() {
   }, []);
 
   async function handleSave() {
+    // Fix 2: block save if days is empty on an enabled item
+    if (wakeUpEnabled && wakeUp.days.length === 0) {
+      setSaveMsg("Select at least one day for Wake up time.");
+      return;
+    }
+    if (sleepEnabled && sleep.days.length === 0) {
+      setSaveMsg("Select at least one day for Sleep time.");
+      return;
+    }
+
     setSaveMsg("");
+    // Fix 3: only send the item if enabled, otherwise null
     const daily_structure: DailyStructure = {
-      wake_up: wakeUp,
-      sleep,
+      wake_up: wakeUpEnabled ? wakeUp : null,
+      sleep: sleepEnabled ? sleep : null,
     };
     const res = await fetch("/api/settings", {
       method: "PUT",
@@ -179,6 +188,10 @@ export default function DailyStructurePage() {
       setSaveMsg("Failed to save.");
     }
   }
+
+  const hasEmptyDays =
+    (wakeUpEnabled && wakeUp.days.length === 0) ||
+    (sleepEnabled && sleep.days.length === 0);
 
   if (loading) {
     return (
@@ -198,26 +211,33 @@ export default function DailyStructurePage() {
 
         <StructureItemEditor
           label="Wake up time"
+          enabled={wakeUpEnabled}
           value={wakeUp}
-          defaultTime="07:00"
+          onToggle={() => setWakeUpEnabled((v) => !v)}
           onChange={setWakeUp}
         />
 
         <StructureItemEditor
           label="Sleep time"
+          enabled={sleepEnabled}
           value={sleep}
-          defaultTime="22:00"
+          onToggle={() => setSleepEnabled((v) => !v)}
           onChange={setSleep}
         />
 
         <div className="flex items-center gap-3">
           <button
             onClick={handleSave}
-            className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded hover:bg-gray-700"
+            disabled={hasEmptyDays}
+            className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded hover:bg-gray-700 disabled:opacity-40"
           >
             Save
           </button>
-          {saveMsg && <p className="text-xs text-gray-500">{saveMsg}</p>}
+          {saveMsg && (
+            <p className={`text-xs ${saveMsg.startsWith("Failed") || saveMsg.startsWith("Select") ? "text-red-500" : "text-gray-500"}`}>
+              {saveMsg}
+            </p>
+          )}
         </div>
       </main>
     </AppShell>

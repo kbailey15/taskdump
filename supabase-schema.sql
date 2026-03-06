@@ -111,3 +111,23 @@ CREATE POLICY "user_settings: insert own" ON user_settings
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "user_settings: update own" ON user_settings
   FOR UPDATE USING (auth.uid() = user_id);
+
+-- ============================================================
+-- user_profile table
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.user_profile (
+  user_id    uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  data       jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user_profile: select own" ON public.user_profile
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "user_profile: insert own" ON public.user_profile
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_profile: update own" ON public.user_profile
+  FOR UPDATE USING (auth.uid() = user_id);

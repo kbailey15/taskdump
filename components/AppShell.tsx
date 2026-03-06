@@ -10,7 +10,7 @@ interface AppShellProps {
 const navLinks = [
   { href: "/tasks", label: "Home" },
   { href: "/today", label: "Today" },
-  { href: "/daily-structure", label: "Daily Structure" },
+  { href: "/profile", label: "Profile" },
   { href: "/settings", label: "Settings" },
 ];
 

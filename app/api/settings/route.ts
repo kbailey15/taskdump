@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { FilterItem } from "@/types";
+import { DailyStructure, FilterItem } from "@/types";
 
 const DEFAULT_STATUSES: FilterItem[] = [
   { id: "open", label: "Open" },
@@ -30,12 +30,15 @@ export async function GET() {
 
   const { data: existing } = await supabase
     .from("user_settings")
-    .select("custom_statuses, custom_areas")
+    .select("custom_statuses, custom_areas, daily_structure")
     .eq("user_id", user.id)
     .single();
 
   if (existing) {
-    return NextResponse.json(existing);
+    return NextResponse.json({
+      ...existing,
+      daily_structure: existing.daily_structure ?? null,
+    });
   }
 
   // Seed defaults
@@ -56,6 +59,7 @@ export async function GET() {
   return NextResponse.json({
     custom_statuses: DEFAULT_STATUSES,
     custom_areas: DEFAULT_AREAS,
+    daily_structure: null,
   });
 }
 
@@ -70,7 +74,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { custom_statuses?: FilterItem[]; custom_areas?: FilterItem[] };
+  let body: { custom_statuses?: FilterItem[]; custom_areas?: FilterItem[]; daily_structure?: DailyStructure };
   try {
     body = await request.json();
   } catch {
@@ -80,6 +84,7 @@ export async function PUT(request: NextRequest) {
   const patch: Record<string, unknown> = { user_id: user.id };
   if (body.custom_statuses !== undefined) patch.custom_statuses = body.custom_statuses;
   if (body.custom_areas !== undefined) patch.custom_areas = body.custom_areas;
+  if (body.daily_structure !== undefined) patch.daily_structure = body.daily_structure;
 
   const { error: upsertError } = await supabase
     .from("user_settings")

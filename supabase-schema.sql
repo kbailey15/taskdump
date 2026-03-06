@@ -100,6 +100,10 @@ CREATE TABLE IF NOT EXISTS user_settings (
   updated_at timestamptz DEFAULT now()
 );
 
+-- daily_structure: { wake_up: { time, days }, sleep: { time, days } }
+ALTER TABLE user_settings
+  ADD COLUMN IF NOT EXISTS daily_structure jsonb;
+
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "user_settings: select own" ON user_settings
   FOR SELECT USING (auth.uid() = user_id);

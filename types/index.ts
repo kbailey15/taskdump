@@ -1,6 +1,22 @@
 export type TaskStatus = "open" | "in_progress" | "waiting" | "completed";
 export type FilterItem = { id: string; label: string; hidden?: boolean };
-export type UserSettings = { custom_statuses: FilterItem[]; custom_areas: FilterItem[] };
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 6=Sat
+
+export interface DailyStructureItem {
+  time: string; // "HH:MM" 24-hour
+  days: DayOfWeek[];
+}
+
+export interface DailyStructure {
+  wake_up: DailyStructureItem | null;
+  sleep: DailyStructureItem | null;
+}
+
+export type UserSettings = {
+  custom_statuses: FilterItem[];
+  custom_areas: FilterItem[];
+  daily_structure: DailyStructure | null;
+};
 export type TaskArea = "health" | "life_admin" | "career" | "relationships" | "fun";
 export type Confidence = "high" | "medium" | "low";
 export type UpdateKind = "merge" | "field_update" | "created";

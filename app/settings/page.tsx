@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { FilterItem, UserSettings } from "@/types";
+import AppShell from "@/components/AppShell";
 
 function slugify(label: string): string {
   return label
@@ -137,15 +138,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
-        <a href="/tasks" className="text-xs text-gray-500 hover:text-gray-800">
-          ← Tasks
-        </a>
-        <h1 className="text-lg font-bold text-gray-900">Settings</h1>
-      </header>
-
+    <AppShell email={email}>
       <main className="max-w-xl mx-auto px-4 py-8 space-y-8">
+        <h1 className="text-lg font-bold text-gray-900">Settings</h1>
         {/* Account */}
         <section className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">Account</h2>
@@ -255,6 +250,6 @@ export default function SettingsPage() {
           {areaMsg && <p className="text-xs text-gray-500">{areaMsg}</p>}
         </section>
       </main>
-    </div>
+    </AppShell>
   );
 }

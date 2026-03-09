@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +7,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --paper: #F4F1EC;
+  --surface: #FDFBF7;
+  --surface2: #EDE9E0;
+  --ink: #1A1814;
+  --warm-mid: #9C9790;
+  --accent: #2A5C8C;
+  --border: #DDD9CE;
 }
 
 @media (prefers-color-scheme: dark) {

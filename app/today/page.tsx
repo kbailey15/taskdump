@@ -507,25 +507,27 @@ export default function TodayPage() {
 
   return (
     <AppShell email={email}>
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-2xl mx-auto px-4 py-8 bg-[#F4F1EC] min-h-screen">
         {/* Page header with date navigation */}
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => navigateDate(-1)}
-            className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors text-xl leading-none"
+            className="p-1 rounded transition-colors text-xl leading-none hover:opacity-60"
+            style={{ color: "#9C9790" }}
             aria-label="Previous day"
           >
             ‹
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-900">
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "28px", lineHeight: 1.1, color: "#1A1814" }}>
               {isViewingToday ? "Today" : viewDate === tomorrowStr ? "Tomorrow" : viewDateLabel}
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">{viewDateLabel}</p>
+            <p className="mt-0.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", color: "#9C9790" }}>{viewDateLabel}</p>
           </div>
           <button
             onClick={() => navigateDate(1)}
-            className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors text-xl leading-none"
+            className="p-1 rounded transition-colors text-xl leading-none hover:opacity-60"
+            style={{ color: "#9C9790" }}
             aria-label="Next day"
           >
             ›
@@ -674,32 +676,43 @@ export default function TodayPage() {
                   <div
                     key={block.id}
                     onClick={() => setSelectedBlock(block)}
-                    className={`cursor-pointer rounded-lg p-4 bg-white transition-all ${
-                      isActive
-                        ? "border border-gray-200 border-l-4 border-l-indigo-500"
-                        : "border border-gray-200 hover:border-gray-300"
-                    } ${isCompleted || isSkipped ? "opacity-40" : ""}`}
+                    className={`group cursor-pointer p-4 transition-all ${isCompleted || isSkipped ? "opacity-40" : ""}`}
+                    style={{
+                      background: "#FDFBF7",
+                      border: "1px solid #DDD9CE",
+                      borderLeft: isActive ? "3px solid #2A5C8C" : "1px solid #DDD9CE",
+                      borderRadius: "10px",
+                    }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">
+                        <p className="mb-0.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", color: "#9C9790" }}>
                           {formatTimeRange(block.start_time, block.end_time)}
                           {block.rescheduled_from && (
-                            <span className="ml-1.5 text-gray-300 line-through">
+                            <span className="ml-1.5 line-through" style={{ color: "#DDD9CE" }}>
                               {formatTimeRange(block.rescheduled_from.start_time, block.rescheduled_from.end_time)}
                             </span>
                           )}
                         </p>
-                        <p className={`text-sm font-medium text-gray-900 ${isSkipped ? "line-through" : ""}`}>
+                        <p
+                          className="font-medium"
+                          style={{
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontSize: "14px",
+                            color: "#1A1814",
+                            textDecoration: isSkipped ? "line-through" : "none",
+                          }}
+                        >
                           {block.title}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Edit button */}
+                        {/* Edit button — visible on card hover only */}
                         <button
                           onClick={(e) => handleOpenEdit(block, e)}
                           title="Edit block"
-                          className="text-gray-300 hover:text-gray-600 transition-colors p-0.5"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                          style={{ color: "#9C9790" }}
                           aria-label="Edit block"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
@@ -707,13 +720,9 @@ export default function TodayPage() {
                           </svg>
                         </button>
                         {isSkipped ? (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400">
-                            Skipped
-                          </span>
+                          <span className="w-[7px] h-[7px] rounded-full flex-shrink-0 bg-gray-300" />
                         ) : (
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeStyle.bg} ${typeStyle.text}`}>
-                            {typeStyle.label}
-                          </span>
+                          <span className={`w-[7px] h-[7px] rounded-full flex-shrink-0 ${typeStyle.bg}`} />
                         )}
                       </div>
                     </div>
@@ -728,23 +737,24 @@ export default function TodayPage() {
       {/* Block detail modal */}
       {selectedBlock && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center sm:p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center sm:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedBlock(null); }}
         >
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-lg sm:rounded-xl p-6 space-y-4 overflow-y-auto sm:max-h-[90vh]">
+          <div className="bg-[#FDFBF7] border border-[#DDD9CE] w-full h-full sm:h-auto sm:max-w-lg sm:rounded-2xl p-6 space-y-4 overflow-y-auto sm:max-h-[90vh]">
             {/* Modal header */}
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs text-gray-400 mb-0.5">
+                <p className="mb-0.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", color: "#9C9790" }}>
                   {formatTimeRange(selectedBlock.start_time, selectedBlock.end_time)}
                 </p>
-                <h2 className="text-base font-semibold text-gray-900">{selectedBlock.title}</h2>
+                <h2 className="text-base font-semibold" style={{ color: "#1A1814" }}>{selectedBlock.title}</h2>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                 <button
                   onClick={(e) => handleOpenEdit(selectedBlock, e)}
                   title="Edit block"
-                  className="text-gray-400 hover:text-gray-700 transition-colors"
+                  className="transition-colors hover:opacity-60"
+                  style={{ color: "#9C9790" }}
                   aria-label="Edit block"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -753,7 +763,8 @@ export default function TodayPage() {
                 </button>
                 <button
                   onClick={() => setSelectedBlock(null)}
-                  className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                  className="text-lg leading-none transition-colors hover:opacity-60"
+                  style={{ color: "#9C9790" }}
                 >
                   ✕
                 </button>
@@ -763,8 +774,10 @@ export default function TodayPage() {
             {/* Why */}
             {selectedBlock.why && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Why you&apos;re doing this</p>
-                <p className="text-sm italic text-gray-500">{selectedBlock.why}</p>
+                <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Why you&apos;re doing this</p>
+                <div className="px-3 py-2.5 rounded-lg bg-[#F5EDD0] border-l-[3px] border-[#D4A84B]">
+                  <p className="text-sm italic" style={{ color: "#1A1814" }}>{selectedBlock.why}</p>
+                </div>
               </div>
             )}
 
@@ -774,17 +787,17 @@ export default function TodayPage() {
               const checks = selectedBlock.guidance_checks ?? [];
               return (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">How to do it</p>
+                  <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>How to do it</p>
                   {lines.length <= 1 ? (
                     // Single line — still show as a checkbox for consistency
                     <div className="flex items-start gap-2.5">
                       <button
                         onClick={() => handleToggleGuidanceCheck(0)}
-                        className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors ${
+                        className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors flex items-center justify-center ${
                           checks.includes(0)
-                            ? "bg-gray-800 border-gray-800"
-                            : "border-gray-300 hover:border-gray-500"
-                        } flex items-center justify-center`}
+                            ? "bg-[#1A1814] border-[#1A1814]"
+                            : "bg-[#F4F1EC] border-[#DDD9CE] hover:border-[#9C9790]"
+                        }`}
                         aria-label="Toggle step"
                       >
                         {checks.includes(0) && (
@@ -793,7 +806,7 @@ export default function TodayPage() {
                           </svg>
                         )}
                       </button>
-                      <span className={`text-sm text-gray-700 ${checks.includes(0) ? "line-through text-gray-400" : ""}`}>
+                      <span className="text-sm" style={{ color: checks.includes(0) ? "#9C9790" : "#1A1814", textDecoration: checks.includes(0) ? "line-through" : "none" }}>
                         {selectedBlock.guidance}
                       </span>
                     </div>
@@ -803,11 +816,11 @@ export default function TodayPage() {
                         <div key={i} className="flex items-start gap-2.5">
                           <button
                             onClick={() => handleToggleGuidanceCheck(i)}
-                            className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors ${
+                            className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors flex items-center justify-center ${
                               checks.includes(i)
-                                ? "bg-gray-800 border-gray-800"
-                                : "border-gray-300 hover:border-gray-500"
-                            } flex items-center justify-center`}
+                                ? "bg-[#1A1814] border-[#1A1814]"
+                                : "bg-[#F4F1EC] border-[#DDD9CE] hover:border-[#9C9790]"
+                            }`}
                             aria-label={`Toggle step ${i + 1}`}
                           >
                             {checks.includes(i) && (
@@ -816,7 +829,7 @@ export default function TodayPage() {
                               </svg>
                             )}
                           </button>
-                          <span className={`text-sm text-gray-700 ${checks.includes(i) ? "line-through text-gray-400" : ""}`}>
+                          <span className="text-sm" style={{ color: checks.includes(i) ? "#9C9790" : "#1A1814", textDecoration: checks.includes(i) ? "line-through" : "none" }}>
                             {line}
                           </span>
                         </div>
@@ -830,37 +843,38 @@ export default function TodayPage() {
             {/* Done when */}
             {selectedBlock.done_metric && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Done when</p>
-                <div className="flex items-start gap-2">
-                  <span className="text-green-500 mt-0.5 leading-5">✓</span>
-                  <p className="text-sm text-gray-700">{selectedBlock.done_metric}</p>
+                <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Done when</p>
+                <div className="px-3 py-2.5 rounded-lg bg-[#D8EDDF] border-l-[3px] border-[#3A7D52]">
+                  <p className="text-sm" style={{ color: "#1A1814" }}>{selectedBlock.done_metric}</p>
                 </div>
               </div>
             )}
 
             {/* Actions */}
             {selectedBlock.status === "completed" ? (
-              <p className="text-sm text-gray-400 font-medium">Completed ✓</p>
+              <p className="text-sm font-medium" style={{ color: "#9C9790" }}>Completed ✓</p>
             ) : selectedBlock.status === "skipped" ? (
-              <p className="text-sm text-gray-400 font-medium">Skipped</p>
+              <p className="text-sm font-medium" style={{ color: "#9C9790" }}>Skipped</p>
             ) : (
               <div className="space-y-2">
                 <button
                   onClick={() => handleMarkComplete(selectedBlock)}
-                  className="w-full py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                  className="w-full py-2 bg-[#1A1814] text-[#F4F1EC] text-sm font-medium rounded-lg hover:bg-[#333] transition-colors"
                 >
                   Mark complete
                 </button>
                 <div className="flex items-center justify-between pt-0.5">
                   <button
                     onClick={() => handleOpenMove(selectedBlock)}
-                    className="text-xs text-gray-500 hover:text-gray-800 underline transition-colors"
+                    className="text-xs underline transition-colors hover:opacity-80"
+                    style={{ color: "#9C9790" }}
                   >
                     Move to different time
                   </button>
                   <button
                     onClick={() => handleSkip(selectedBlock)}
-                    className="text-xs text-gray-400 hover:text-red-400 transition-colors"
+                    className="text-xs transition-colors hover:text-red-400"
+                    style={{ color: "#9C9790" }}
                   >
                     Skip
                   </button>
@@ -874,49 +888,50 @@ export default function TodayPage() {
       {/* Move block modal */}
       {moveBlock && moveForm && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center sm:p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center sm:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setMoveBlock(null); setMoveForm(null); } }}
         >
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-xl p-6">
+          <div className="bg-[#FDFBF7] border border-[#DDD9CE] w-full sm:max-w-sm sm:rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-gray-900">Move block</h2>
+              <h2 className="text-base font-semibold" style={{ color: "#1A1814" }}>Move block</h2>
               <button
                 onClick={() => { setMoveBlock(null); setMoveForm(null); }}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                className="text-lg leading-none transition-colors hover:opacity-60"
+                style={{ color: "#9C9790" }}
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-sm text-gray-500 mb-4 truncate">{moveBlock.title}</p>
+            <p className="text-sm mb-4 truncate" style={{ color: "#9C9790" }}>{moveBlock.title}</p>
 
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-500 mb-1">New date</label>
+              <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>New date</label>
               <input
                 type="date"
                 value={moveForm.date}
                 onChange={(e) => setMoveForm({ ...moveForm, date: e.target.value })}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] focus:outline-none focus:border-[#2A5C8C] transition-colors"
               />
             </div>
 
             <div className="flex gap-3 mb-4">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-500 mb-1">New start</label>
+                <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>New start</label>
                 <input
                   type="time"
                   value={moveForm.start_time}
                   onChange={(e) => setMoveForm({ ...moveForm, start_time: e.target.value })}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] focus:outline-none focus:border-[#2A5C8C] transition-colors"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-500 mb-1">New end</label>
+                <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>New end</label>
                 <input
                   type="time"
                   value={moveForm.end_time}
                   onChange={(e) => setMoveForm({ ...moveForm, end_time: e.target.value })}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] focus:outline-none focus:border-[#2A5C8C] transition-colors"
                 />
               </div>
             </div>
@@ -932,8 +947,8 @@ export default function TodayPage() {
               return (
                 <div className={`mb-4 p-3 rounded-lg text-xs leading-relaxed ${
                   isRecurring
-                    ? "bg-amber-50 border border-amber-200 text-amber-700"
-                    : "bg-gray-50 text-gray-600"
+                    ? "bg-[#F5EDD0] border-l-[3px] border-[#D4A84B] text-[#1A1814]"
+                    : "bg-[#F4F1EC] text-[#9C9790]"
                 }`}>
                   {isRecurring
                     ? <>⚠ Overlaps with &ldquo;{conflictTitle}&rdquo;. Since this is a recurring block, it will be flagged in your end-of-day reflection.</>
@@ -946,13 +961,14 @@ export default function TodayPage() {
               <button
                 onClick={handleSaveMove}
                 disabled={savingMove}
-                className="flex-1 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2 bg-[#1A1814] text-[#F4F1EC] text-sm font-medium rounded-lg hover:bg-[#333] disabled:opacity-50 transition-colors"
               >
                 {savingMove ? "Moving…" : "Move"}
               </button>
               <button
                 onClick={() => { setMoveBlock(null); setMoveForm(null); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800"
+                className="px-4 py-2 text-sm transition-colors hover:opacity-80"
+                style={{ color: "#9C9790" }}
               >
                 Cancel
               </button>
@@ -964,16 +980,17 @@ export default function TodayPage() {
       {/* Edit block modal */}
       {editBlock && editForm && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center sm:p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center sm:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setEditBlock(null); setEditForm(null); } }}
         >
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-lg sm:rounded-xl p-6 overflow-y-auto sm:max-h-[90vh]">
+          <div className="bg-[#FDFBF7] border border-[#DDD9CE] w-full h-full sm:h-auto sm:max-w-lg sm:rounded-2xl p-6 overflow-y-auto sm:max-h-[90vh]">
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-gray-900">Edit block</h2>
+              <h2 className="text-base font-semibold" style={{ color: "#1A1814" }}>Edit block</h2>
               <button
                 onClick={() => { setEditBlock(null); setEditForm(null); }}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                className="text-lg leading-none transition-colors hover:opacity-60"
+                style={{ color: "#9C9790" }}
               >
                 ✕
               </button>
@@ -983,70 +1000,70 @@ export default function TodayPage() {
               {/* Times */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Start time</label>
+                  <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Start time</label>
                   <input
                     type="time"
                     value={editForm.start_time}
                     onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                    className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] focus:outline-none focus:border-[#2A5C8C] transition-colors"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">End time</label>
+                  <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>End time</label>
                   <input
                     type="time"
                     value={editForm.end_time}
                     onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                    className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] focus:outline-none focus:border-[#2A5C8C] transition-colors"
                   />
                 </div>
               </div>
 
               {/* Title */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Title</label>
                 <input
                   type="text"
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] focus:outline-none focus:border-[#2A5C8C] transition-colors"
                 />
               </div>
 
               {/* Why */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Why you&apos;re doing this</label>
+                <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Why you&apos;re doing this</label>
                 <textarea
                   value={editForm.why}
                   onChange={(e) => setEditForm({ ...editForm, why: e.target.value })}
                   rows={2}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 resize-none"
+                  className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] placeholder-[#9C9790] focus:outline-none focus:border-[#2A5C8C] transition-colors resize-none"
                 />
               </div>
 
               {/* Guidance / steps */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
+                <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>
                   How to do it
-                  <span className="ml-1 text-gray-400 font-normal">(each line becomes a step)</span>
+                  <span className="ml-1 normal-case" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>(each line becomes a step)</span>
                 </label>
                 <textarea
                   value={editForm.guidance}
                   onChange={(e) => setEditForm({ ...editForm, guidance: e.target.value })}
                   rows={4}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 resize-none"
+                  className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] placeholder-[#9C9790] focus:outline-none focus:border-[#2A5C8C] transition-colors resize-none"
                   placeholder="Step 1&#10;Step 2&#10;Step 3"
                 />
               </div>
 
               {/* Done metric */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Done when</label>
+                <label className="block uppercase tracking-widest mb-1" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Done when</label>
                 <textarea
                   value={editForm.done_metric}
                   onChange={(e) => setEditForm({ ...editForm, done_metric: e.target.value })}
                   rows={2}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 resize-none"
+                  className="w-full text-sm bg-[#F4F1EC] border border-[#DDD9CE] rounded-lg px-3 py-2 text-[#1A1814] placeholder-[#9C9790] focus:outline-none focus:border-[#2A5C8C] transition-colors resize-none"
                 />
               </div>
             </div>
@@ -1056,13 +1073,14 @@ export default function TodayPage() {
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="flex-1 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2 bg-[#1A1814] text-[#F4F1EC] text-sm font-medium rounded-lg hover:bg-[#333] disabled:opacity-50 transition-colors"
               >
                 {savingEdit ? "Saving…" : "Save changes"}
               </button>
               <button
                 onClick={() => { setEditBlock(null); setEditForm(null); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800"
+                className="px-4 py-2 text-sm transition-colors hover:opacity-80"
+                style={{ color: "#9C9790" }}
               >
                 Cancel
               </button>

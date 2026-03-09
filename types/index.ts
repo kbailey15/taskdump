@@ -99,7 +99,7 @@ export type PlanBlockType =
   | "commitment"
   | "personal_growth";
 
-export type PlanBlockStatus = "pending" | "completed";
+export type PlanBlockStatus = "pending" | "completed" | "skipped";
 
 export interface PlanBlock {
   id: string;
@@ -112,6 +112,24 @@ export interface PlanBlock {
   guidance: string;
   done_metric: string;
   status: PlanBlockStatus;
+  guidance_checks?: number[]; // indices of checked guidance step lines
+  is_recurring?: boolean; // true for blocks that repeat daily (routine, exercise, meal, etc.)
+  rescheduled_from?: { start_time: string; end_time: string }; // original time if moved
+}
+
+// Recorded whenever a block is manually edited.
+// was_late=true means the edit happened after the block's scheduled start time,
+// suggesting the day didn't go as planned. Referenced during nightly reflection.
+export interface PlanEditEntry {
+  ts: string;          // ISO timestamp of the edit
+  block_id: string;
+  block_title: string; // title at time of edit (for readability in logs)
+  changes: { field: string; old: string; new: string }[];
+  scheduled_start: string; // HH:MM — original start time of the block
+  plan_date: string;   // YYYY-MM-DD
+  was_late: boolean;   // true if edited after scheduled start time
+  action?: "edit" | "skip" | "move"; // what triggered this log entry
+  conflict_note?: string; // set when a recurring block is moved to a conflicting slot
 }
 
 export interface DailyPlan {
@@ -123,4 +141,7 @@ export interface DailyPlan {
   generated_at: string;
   version: number;
   updated_at: string;
+  // Internal log of manual edits — used to detect off-schedule days
+  // and surface patterns during nightly reflection.
+  edit_log?: PlanEditEntry[];
 }

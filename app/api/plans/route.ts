@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { date: string; blocks: PlanBlock[]; comments?: string };
+  let body: { date: string; blocks: PlanBlock[]; comments?: string; edit_log?: unknown[] };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { date, blocks, comments } = body;
+  const { date, blocks, comments, edit_log } = body;
   if (!date || !Array.isArray(blocks)) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     date,
     blocks,
     comments: comments ?? null,
+    edit_log: edit_log ?? [],
     version: (existing?.version ?? 0) + 1,
   };
 

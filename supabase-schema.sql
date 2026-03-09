@@ -160,6 +160,13 @@ CREATE TABLE IF NOT EXISTS public.daily_plans (
   UNIQUE (user_id, date)
 );
 
+-- edit_log: append-only array of manual block edits.
+-- Each entry: { ts, block_id, block_title, changes[{field,old,new}], scheduled_start, plan_date, was_late }
+-- was_late=true means the edit happened after the block's start time (day deviated from plan).
+-- Consumed by nightly reflection to surface patterns and suggest schedule adjustments.
+ALTER TABLE public.daily_plans
+  ADD COLUMN IF NOT EXISTS edit_log jsonb NOT NULL DEFAULT '[]'::jsonb;
+
 CREATE TRIGGER daily_plans_updated_at
   BEFORE UPDATE ON public.daily_plans
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();

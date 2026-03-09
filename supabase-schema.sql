@@ -131,3 +131,49 @@ CREATE POLICY "user_profile: insert own" ON public.user_profile
 
 CREATE POLICY "user_profile: update own" ON public.user_profile
   FOR UPDATE USING (auth.uid() = user_id);
+
+-- ============================================================
+-- daily_plans table
+-- ============================================================
+-- Each item in the blocks jsonb array has this shape:
+-- {
+--   id: string,
+--   start_time: string (HH:MM 24hr),
+--   end_time: string (HH:MM 24hr),
+--   title: string,
+--   type: "deep_work" | "admin" | "life_admin" | "meeting" | "routine" | "break" | "exercise" | "meal",
+--   task_id: string | null,
+--   why: string,
+--   guidance: string,
+--   done_metric: string,
+--   status: "pending" | "completed"
+-- }
+CREATE TABLE IF NOT EXISTS public.daily_plans (
+  id            text PRIMARY KEY,
+  user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date          date NOT NULL,
+  blocks        jsonb NOT NULL DEFAULT '[]'::jsonb,
+  comments      text,
+  generated_at  timestamptz DEFAULT now(),
+  version       integer NOT NULL DEFAULT 1,
+  updated_at    timestamptz DEFAULT now(),
+  UNIQUE (user_id, date)
+);
+
+CREATE TRIGGER daily_plans_updated_at
+  BEFORE UPDATE ON public.daily_plans
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.daily_plans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "daily_plans: select own" ON public.daily_plans
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "daily_plans: insert own" ON public.daily_plans
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "daily_plans: update own" ON public.daily_plans
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "daily_plans: delete own" ON public.daily_plans
+  FOR DELETE USING (auth.uid() = user_id);

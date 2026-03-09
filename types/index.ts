@@ -86,3 +86,41 @@ export interface PendingActionResult {
   existing_task: Task;
   score: number;
 }
+
+export type PlanBlockType =
+  | "deep_work"
+  | "admin"
+  | "life_admin"
+  | "meeting"
+  | "routine"
+  | "break"
+  | "exercise"
+  | "meal"
+  | "commitment"
+  | "personal_growth";
+
+export type PlanBlockStatus = "pending" | "completed";
+
+export interface PlanBlock {
+  id: string;
+  start_time: string; // HH:MM 24hr
+  end_time: string;   // HH:MM 24hr
+  title: string;
+  type: PlanBlockType;
+  task_id: string | null;
+  why: string;
+  guidance: string;
+  done_metric: string;
+  status: PlanBlockStatus;
+}
+
+export interface DailyPlan {
+  id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  blocks: PlanBlock[];
+  comments: string | null;
+  generated_at: string;
+  version: number;
+  updated_at: string;
+}

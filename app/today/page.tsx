@@ -112,6 +112,13 @@ export default function TodayPage() {
   // Late-edit pattern nudge
   const [lateEditNudge, setLateEditNudge] = useState(false);
 
+  // Toast notification
+  const [toast, setToast] = useState<string | null>(null);
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }
+
   const isViewingToday = viewDate === todayStr;
   const viewDateLabel = getDateLabel(viewDate);
   const showTomorrowNudge = isViewingToday && currentMinutes >= 18 * 60 && tomorrowPlanExists === false;
@@ -361,6 +368,7 @@ export default function TodayPage() {
           setPlan(data.plan);
           setMoveBlock(null);
           setMoveForm(null);
+          showToast("Block moved");
         }
       } else {
         // Cross-date move: remove from current plan, add to target date plan
@@ -390,6 +398,7 @@ export default function TodayPage() {
           setPlan(data.plan);
           setMoveBlock(null);
           setMoveForm(null);
+          showToast("Block moved");
         }
       }
     } finally {
@@ -457,6 +466,7 @@ export default function TodayPage() {
         setPlan(data.plan);
         setEditBlock(null);
         setEditForm(null);
+        showToast("Block saved");
       }
     } finally {
       setSavingEdit(false);
@@ -1058,6 +1068,13 @@ export default function TodayPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1814] text-[#F4F1EC] text-sm px-4 py-2 rounded-lg shadow-lg pointer-events-none">
+          {toast}
         </div>
       )}
     </AppShell>

@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/week", label: "This Week" },
   { href: "/tasks", label: "All Tasks" },
   { href: "/goals", label: "Goals" },
+  { href: "/profile", label: "Know Me" },
 ];
 
 export default function AppShell({ email, children }: AppShellProps) {

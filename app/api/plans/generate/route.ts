@@ -4,6 +4,21 @@ import { createClient } from "@/lib/supabase/server";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+interface Commitment {
+  label: string;
+  days: string[];
+  start_time: string;
+  duration_minutes: string | number;
+}
+
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  const hh = Math.floor(total / 60) % 24;
+  const mm = total % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createClient();
   const {
@@ -52,10 +67,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
   }
 
-  // Derive day of week from date
-  const dayOfWeek = new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
-    weekday: "long",
-  });
+  // Derive day of week in both formats
+  const dateObj = new Date(`${date}T12:00:00`);
+  const dayOfWeek = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  const dayShort = dateObj.toLocaleDateString("en-US", { weekday: "short" }); // "Mon", "Tue", etc.
+
+  // Pre-seed standing commitments that fall on today
+  const allCommitments: Commitment[] = (profileData as { standing?: { commitments?: Commitment[] } }).standing?.commitments ?? [];
+  const todaysCommitments = allCommitments.filter(
+    (c) => Array.isArray(c.days) && c.days.includes(dayShort) && c.start_time && c.duration_minutes
+  );
+
+  const seededBlocks = todaysCommitments.map((c, i) => ({
+    id: `seeded_${i + 1}`,
+    start_time: c.start_time,
+    end_time: addMinutes(c.start_time, Number(c.duration_minutes)),
+    title: c.label,
+    type: "commitment" as const,
+    task_id: null,
+    why: "Standing commitment from your profile.",
+    guidance: "",
+    done_metric: "",
+    status: "pending" as const,
+  }));
 
   const systemMessage = `You are KBLOS, a personal chief of staff and life operating system. Your job is to generate a realistic, personalized daily plan. You must return ONLY a valid JSON array. No preamble, no explanation, no markdown fences. Just the raw JSON array starting with [ and ending with ].
 
@@ -73,6 +107,11 @@ Valid block types (use exactly as written):
 - meeting — calls and meetings with other people
 - meal — dedicated meal times (if you want to separate from routine)`;
 
+  const seededSection = seededBlocks.length > 0
+    ? `\nCONFIRMED BLOCKS FOR TODAY (do not move, omit, or rename these — schedule everything else around them):
+${JSON.stringify(seededBlocks, null, 2)}\n`
+    : "";
+
   const userMessage = `Today is ${date} (${dayOfWeek}).
 
 USER PROFILE:
@@ -80,12 +119,12 @@ ${JSON.stringify(profileData, null, 2)}
 
 OPEN TASKS:
 ${JSON.stringify(tasks, null, 2)}
-
+${seededSection}
 GENERATE a complete time-blocked day plan for ${date}.
 
 Rules:
 - Start from the user's wake_up_time, end at lights_out_time (both in their schedule section)
-- Standing commitments from their profile are fixed blocks — include them exactly
+- The CONFIRMED BLOCKS above are already placed — include them verbatim in your output
 - Schedule deep work tasks during their best deep_work_time window
 - Schedule admin and life admin tasks during their admin_time window
 - Include all meals, breaks, and wind-down from their daily schedule
@@ -131,6 +170,19 @@ Return only the raw JSON array of blocks. No other text.`;
       done_metric: (block.done_metric ?? block.doneMetric ?? "") as string,
       status: "pending" as const,
     }));
+
+    // Guarantee seeded blocks are present — inject any that Claude dropped
+    type NormalizedBlock = typeof normalized[number];
+    for (const seeded of seededBlocks) {
+      const alreadyPresent = normalized.some(
+        (b: NormalizedBlock) => b.title === seeded.title && b.start_time === seeded.start_time
+      );
+      if (!alreadyPresent) {
+        normalized.push(seeded);
+      }
+    }
+    // Re-sort by start_time after any injections
+    normalized.sort((a: NormalizedBlock, b: NormalizedBlock) => a.start_time.localeCompare(b.start_time));
 
     // Fetch existing plan version
     const { data: existing } = await supabase

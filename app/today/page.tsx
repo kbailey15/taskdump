@@ -3,19 +3,19 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import AppShell from "@/components/AppShell";
-import { DailyPlan, PlanBlock, PlanBlockType, PlanEditEntry } from "@/types";
+import { DailyPlan, PlanBlock, PlanEditEntry } from "@/types";
 
-const TYPE_STYLES: Record<PlanBlockType, { bg: string; text: string; label: string }> = {
-  deep_work:      { bg: "bg-indigo-100",  text: "text-indigo-700",  label: "Deep work" },
-  admin:          { bg: "bg-gray-100",    text: "text-gray-600",    label: "Admin" },
-  life_admin:     { bg: "bg-amber-100",   text: "text-amber-700",   label: "Life admin" },
-  meeting:        { bg: "bg-blue-100",    text: "text-blue-700",    label: "Meeting" },
-  routine:        { bg: "bg-slate-100",   text: "text-slate-600",   label: "Routine" },
-  break:          { bg: "bg-green-100",   text: "text-green-700",   label: "Break" },
-  exercise:       { bg: "bg-emerald-100", text: "text-emerald-700", label: "Exercise" },
-  meal:           { bg: "bg-orange-100",  text: "text-orange-700",  label: "Meal" },
-  commitment:     { bg: "bg-purple-100",  text: "text-purple-700",  label: "Commitment" },
-  personal_growth:{ bg: "bg-rose-100",   text: "text-rose-700",    label: "Personal growth" },
+const DOT_COLORS: Record<string, string> = {
+  deep_work:      "#2A5C8C",
+  meeting:        "#2A5C8C",
+  commitment:     "#2A5C8C",
+  personal_growth:"#2A5C8C",
+  exercise:       "#3A7D52",
+  break:          "#3A7D52",
+  meal:           "#3A7D52",
+  admin:          "#9B59B6",
+  life_admin:     "#9B59B6",
+  routine:        "#9C9790",
 };
 
 function timeToMinutes(time: string): number {
@@ -93,7 +93,7 @@ export default function TodayPage() {
   const [tomorrowPlanExists, setTomorrowPlanExists] = useState<boolean | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genComments, setGenComments] = useState("");
-  const [selectedBlock, setSelectedBlock] = useState<PlanBlock | null>(null);
+  const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
   const [regenComments, setRegenComments] = useState("");
   const [regenError, setRegenError] = useState("");
@@ -256,7 +256,7 @@ export default function TodayPage() {
     if (res.ok) {
       const data = await res.json();
       setPlan(data.plan);
-      setSelectedBlock(null);
+      setExpandedBlockId(null);
     }
   }
 
@@ -283,12 +283,12 @@ export default function TodayPage() {
     if (res.ok) {
       const data = await res.json();
       setPlan(data.plan);
-      setSelectedBlock(null);
+      setExpandedBlockId(null);
     }
   }
 
   function handleOpenMove(block: PlanBlock) {
-    setSelectedBlock(null);
+    setExpandedBlockId(null);
     setMoveBlock(block);
     setMoveForm({ date: plan?.date ?? viewDate, start_time: block.start_time, end_time: block.end_time });
   }
@@ -397,10 +397,10 @@ export default function TodayPage() {
     }
   }
 
-  // Open edit modal for a block (closes detail modal if open)
+  // Open edit modal for a block
   function handleOpenEdit(block: PlanBlock, e: React.MouseEvent) {
     e.stopPropagation();
-    setSelectedBlock(null);
+    setExpandedBlockId(null);
     setEditBlock(block);
     setEditForm({
       start_time: block.start_time,
@@ -465,17 +465,17 @@ export default function TodayPage() {
 
   // Toggle a guidance step checkbox — persisted to DB, does not create an edit_log entry
   async function handleToggleGuidanceCheck(lineIndex: number) {
-    if (!plan || !selectedBlock) return;
-    const checks = selectedBlock.guidance_checks ?? [];
+    if (!plan || !expandedBlockId) return;
+    const block = plan.blocks.find((b) => b.id === expandedBlockId);
+    if (!block) return;
+    const checks = block.guidance_checks ?? [];
     const newChecks = checks.includes(lineIndex)
       ? checks.filter((i) => i !== lineIndex)
       : [...checks, lineIndex];
 
-    const updatedSelectedBlock = { ...selectedBlock, guidance_checks: newChecks };
-    setSelectedBlock(updatedSelectedBlock);
-
+    const updatedBlock = { ...block, guidance_checks: newChecks };
     const updatedBlocks = plan.blocks.map((b) =>
-      b.id === selectedBlock.id ? updatedSelectedBlock : b
+      b.id === expandedBlockId ? updatedBlock : b
     );
     const res = await fetch("/api/plans", {
       method: "POST",
@@ -519,10 +519,10 @@ export default function TodayPage() {
             ‹
           </button>
           <div className="flex-1">
-            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "28px", lineHeight: 1.1, color: "#1A1814" }}>
-              {isViewingToday ? "Today" : viewDate === tomorrowStr ? "Tomorrow" : viewDateLabel}
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "36px", fontWeight: "bold", lineHeight: 1.1, color: "#1A1814" }}>
+              {isViewingToday ? "Today" : viewDateLabel.split(",")[0]}
             </h1>
-            <p className="mt-0.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", color: "#9C9790" }}>{viewDateLabel}</p>
+            <p className="mt-1 text-sm" style={{ color: "#9C9790" }}>{viewDateLabel}</p>
           </div>
           <button
             onClick={() => navigateDate(1)}
@@ -604,7 +604,6 @@ export default function TodayPage() {
           <>
             {/* Top bar */}
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs text-gray-400">{viewDateLabel}</span>
               <span className="text-xs text-gray-500 font-medium">
                 {completedCount} of {totalCount} blocks complete
               </span>
@@ -670,12 +669,13 @@ export default function TodayPage() {
                 const isActive = block.id === activeBlockId;
                 const isCompleted = block.status === "completed";
                 const isSkipped = block.status === "skipped";
-                const typeStyle = TYPE_STYLES[block.type] ?? TYPE_STYLES.routine;
+
+                const isExpanded = expandedBlockId === block.id;
 
                 return (
                   <div
                     key={block.id}
-                    onClick={() => setSelectedBlock(block)}
+                    onClick={() => setExpandedBlockId((prev) => prev === block.id ? null : block.id)}
                     className={`group cursor-pointer p-4 transition-all ${isCompleted || isSkipped ? "opacity-40" : ""}`}
                     style={{
                       background: "#FDFBF7",
@@ -704,6 +704,11 @@ export default function TodayPage() {
                           }}
                         >
                           {block.title}
+                          {(block as PlanBlock & { sub?: string }).sub && (
+                            <span style={{ fontSize: "14px", fontStyle: "italic", fontWeight: "normal", color: "#9C9790" }}>
+                              {" \u2014 "}{(block as PlanBlock & { sub?: string }).sub}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -719,13 +724,131 @@ export default function TodayPage() {
                             <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
                           </svg>
                         </button>
+                        <span className="inline-flex items-center gap-0.5 bg-[#EDE9E0] text-[#9C9790] text-xs font-mono rounded-full px-2 py-0.5">
+                          ⏱ {(() => { const m = timeToMinutes(block.end_time) - timeToMinutes(block.start_time); return m < 60 ? `${m}m` : m % 60 === 0 ? `${m / 60}h` : `${Math.floor(m / 60)}h ${m % 60}m`; })()}
+                        </span>
                         {isSkipped ? (
-                          <span className="w-[7px] h-[7px] rounded-full flex-shrink-0 bg-gray-300" />
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-300" />
                         ) : (
-                          <span className={`w-[7px] h-[7px] rounded-full flex-shrink-0 ${typeStyle.bg}`} />
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: DOT_COLORS[block.type] ?? "#9C9790" }} />
                         )}
                       </div>
                     </div>
+
+                    {/* Inline expanded details */}
+                    {isExpanded && (
+                      <div className="mt-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Why */}
+                        {block.why && (
+                          <div>
+                            <p className="uppercase tracking-widest mb-1.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Why you&apos;re doing this</p>
+                            <div className="px-3 py-2.5 rounded-lg bg-[#F5EDD0] border-l-[3px] border-[#D4A84B]">
+                              <p className="text-sm italic" style={{ color: "#1A1814" }}>{block.why}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Guidance steps */}
+                        {block.guidance && (() => {
+                          const lines = block.guidance.split("\n").filter((l) => l.trim());
+                          const checks = block.guidance_checks ?? [];
+                          return (
+                            <div>
+                              <p className="uppercase tracking-widest mb-1.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>How to do it</p>
+                              {lines.length <= 1 ? (
+                                <div className="flex items-start gap-2.5">
+                                  <button
+                                    onClick={() => handleToggleGuidanceCheck(0)}
+                                    className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors flex items-center justify-center ${
+                                      checks.includes(0)
+                                        ? "bg-[#1A1814] border-[#1A1814]"
+                                        : "bg-[#F4F1EC] border-[#DDD9CE] hover:border-[#9C9790]"
+                                    }`}
+                                    aria-label="Toggle step"
+                                  >
+                                    {checks.includes(0) && (
+                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
+                                        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  <span className="text-sm" style={{ color: checks.includes(0) ? "#9C9790" : "#1A1814", textDecoration: checks.includes(0) ? "line-through" : "none" }}>
+                                    {block.guidance}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {lines.map((line, i) => (
+                                    <div key={i} className="flex items-start gap-2.5">
+                                      <button
+                                        onClick={() => handleToggleGuidanceCheck(i)}
+                                        className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors flex items-center justify-center ${
+                                          checks.includes(i)
+                                            ? "bg-[#1A1814] border-[#1A1814]"
+                                            : "bg-[#F4F1EC] border-[#DDD9CE] hover:border-[#9C9790]"
+                                        }`}
+                                        aria-label={`Toggle step ${i + 1}`}
+                                      >
+                                        {checks.includes(i) && (
+                                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
+                                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                      <span className="text-sm" style={{ color: checks.includes(i) ? "#9C9790" : "#1A1814", textDecoration: checks.includes(i) ? "line-through" : "none" }}>
+                                        {line}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Done when */}
+                        {block.done_metric && (
+                          <div>
+                            <p className="uppercase tracking-widest mb-1.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Done when</p>
+                            <div className="px-3 py-2.5 rounded-lg bg-[#D8EDDF] border-l-[3px] border-[#3A7D52]">
+                              <p className="text-sm" style={{ color: "#1A1814" }}>{block.done_metric}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        {block.status === "completed" ? (
+                          <p className="text-sm font-medium" style={{ color: "#9C9790" }}>Completed ✓</p>
+                        ) : block.status === "skipped" ? (
+                          <p className="text-sm font-medium" style={{ color: "#9C9790" }}>Skipped</p>
+                        ) : (
+                          <div className="space-y-2">
+                            <button
+                              onClick={() => handleMarkComplete(block)}
+                              className="w-full py-2 bg-[#1A1814] text-[#F4F1EC] text-sm font-medium rounded-lg hover:bg-[#333] transition-colors"
+                            >
+                              Mark complete
+                            </button>
+                            <div className="flex items-center justify-between pt-0.5">
+                              <button
+                                onClick={() => handleOpenMove(block)}
+                                className="text-xs underline transition-colors hover:opacity-80"
+                                style={{ color: "#9C9790" }}
+                              >
+                                Reschedule
+                              </button>
+                              <button
+                                onClick={() => handleSkip(block)}
+                                className="text-xs transition-colors hover:text-red-400"
+                                style={{ color: "#9C9790" }}
+                              >
+                                Skip
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -733,157 +856,6 @@ export default function TodayPage() {
           </>
         )}
       </main>
-
-      {/* Block detail modal */}
-      {selectedBlock && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center sm:p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setSelectedBlock(null); }}
-        >
-          <div className="bg-[#FDFBF7] border border-[#DDD9CE] w-full h-full sm:h-auto sm:max-w-lg sm:rounded-2xl p-6 space-y-4 overflow-y-auto sm:max-h-[90vh]">
-            {/* Modal header */}
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="mb-0.5" style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", color: "#9C9790" }}>
-                  {formatTimeRange(selectedBlock.start_time, selectedBlock.end_time)}
-                </p>
-                <h2 className="text-base font-semibold" style={{ color: "#1A1814" }}>{selectedBlock.title}</h2>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
-                <button
-                  onClick={(e) => handleOpenEdit(selectedBlock, e)}
-                  title="Edit block"
-                  className="transition-colors hover:opacity-60"
-                  style={{ color: "#9C9790" }}
-                  aria-label="Edit block"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setSelectedBlock(null)}
-                  className="text-lg leading-none transition-colors hover:opacity-60"
-                  style={{ color: "#9C9790" }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Why */}
-            {selectedBlock.why && (
-              <div>
-                <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Why you&apos;re doing this</p>
-                <div className="px-3 py-2.5 rounded-lg bg-[#F5EDD0] border-l-[3px] border-[#D4A84B]">
-                  <p className="text-sm italic" style={{ color: "#1A1814" }}>{selectedBlock.why}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Guidance — each line is a checkbox step */}
-            {selectedBlock.guidance && (() => {
-              const lines = selectedBlock.guidance.split("\n").filter((l) => l.trim());
-              const checks = selectedBlock.guidance_checks ?? [];
-              return (
-                <div>
-                  <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>How to do it</p>
-                  {lines.length <= 1 ? (
-                    // Single line — still show as a checkbox for consistency
-                    <div className="flex items-start gap-2.5">
-                      <button
-                        onClick={() => handleToggleGuidanceCheck(0)}
-                        className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors flex items-center justify-center ${
-                          checks.includes(0)
-                            ? "bg-[#1A1814] border-[#1A1814]"
-                            : "bg-[#F4F1EC] border-[#DDD9CE] hover:border-[#9C9790]"
-                        }`}
-                        aria-label="Toggle step"
-                      >
-                        {checks.includes(0) && (
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
-                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </button>
-                      <span className="text-sm" style={{ color: checks.includes(0) ? "#9C9790" : "#1A1814", textDecoration: checks.includes(0) ? "line-through" : "none" }}>
-                        {selectedBlock.guidance}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {lines.map((line, i) => (
-                        <div key={i} className="flex items-start gap-2.5">
-                          <button
-                            onClick={() => handleToggleGuidanceCheck(i)}
-                            className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-colors flex items-center justify-center ${
-                              checks.includes(i)
-                                ? "bg-[#1A1814] border-[#1A1814]"
-                                : "bg-[#F4F1EC] border-[#DDD9CE] hover:border-[#9C9790]"
-                            }`}
-                            aria-label={`Toggle step ${i + 1}`}
-                          >
-                            {checks.includes(i) && (
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
-                                <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            )}
-                          </button>
-                          <span className="text-sm" style={{ color: checks.includes(i) ? "#9C9790" : "#1A1814", textDecoration: checks.includes(i) ? "line-through" : "none" }}>
-                            {line}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Done when */}
-            {selectedBlock.done_metric && (
-              <div>
-                <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>Done when</p>
-                <div className="px-3 py-2.5 rounded-lg bg-[#D8EDDF] border-l-[3px] border-[#3A7D52]">
-                  <p className="text-sm" style={{ color: "#1A1814" }}>{selectedBlock.done_metric}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            {selectedBlock.status === "completed" ? (
-              <p className="text-sm font-medium" style={{ color: "#9C9790" }}>Completed ✓</p>
-            ) : selectedBlock.status === "skipped" ? (
-              <p className="text-sm font-medium" style={{ color: "#9C9790" }}>Skipped</p>
-            ) : (
-              <div className="space-y-2">
-                <button
-                  onClick={() => handleMarkComplete(selectedBlock)}
-                  className="w-full py-2 bg-[#1A1814] text-[#F4F1EC] text-sm font-medium rounded-lg hover:bg-[#333] transition-colors"
-                >
-                  Mark complete
-                </button>
-                <div className="flex items-center justify-between pt-0.5">
-                  <button
-                    onClick={() => handleOpenMove(selectedBlock)}
-                    className="text-xs underline transition-colors hover:opacity-80"
-                    style={{ color: "#9C9790" }}
-                  >
-                    Move to different time
-                  </button>
-                  <button
-                    onClick={() => handleSkip(selectedBlock)}
-                    className="text-xs transition-colors hover:text-red-400"
-                    style={{ color: "#9C9790" }}
-                  >
-                    Skip
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Move block modal */}
       {moveBlock && moveForm && (

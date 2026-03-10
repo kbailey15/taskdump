@@ -61,7 +61,7 @@ export default function AppShell({ email, children }: AppShellProps) {
             className="text-xs italic leading-snug"
             style={{ fontFamily: "'DM Serif Display', serif", color: "#9C9790" }}
           >
-            "Your eye is on Canada. Keep hiking."
+            &ldquo;Your eye is on Canada. Keep hiking.&rdquo;
           </p>
           {email && (
             <p className="text-xs truncate" style={{ color: "#9C9790" }} title={email}>

@@ -1,4 +1,4 @@
-export type TaskStatus = "open" | "in_progress" | "waiting" | "completed";
+export type TaskStatus = "open" | "in_progress" | "waiting" | "completed" | "not_important";
 export type FilterItem = { id: string; label: string; hidden?: boolean };
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 6=Sat
 

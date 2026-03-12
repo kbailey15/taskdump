@@ -11,6 +11,7 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
   in_progress: "bg-blue-100 text-blue-700 hover:bg-blue-200",
   waiting: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
   completed: "bg-green-100 text-green-700 hover:bg-green-200",
+  not_important: "bg-gray-50 text-gray-400 hover:bg-gray-100",
 };
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -18,6 +19,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
   in_progress: "in progress",
   waiting: "waiting",
   completed: "done",
+  not_important: "not important",
 };
 
 function getDueDateMeta(dueDate: string | null): {
@@ -95,7 +97,11 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
 
   async function dismissAsNotImportant(taskId: string) {
     setDismissing(true);
-    const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "not_important" }),
+    });
     if (res.ok) {
       onDelete?.(taskId);
     } else {

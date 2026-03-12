@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import AppShell from "@/components/AppShell";
-import { DailyPlan, PlanBlock } from "@/types";
+import { DailyPlan, PlanBlock, Task } from "@/types";
 
 interface DeferredItem {
   block: PlanBlock;
@@ -31,15 +31,20 @@ function formatOriginalDate(dateStr: string): string {
 
 export default function DeferredPage() {
   const [items, setItems] = useState<DeferredItem[]>([]);
+  const [notImportantTasks, setNotImportantTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
 
-  // Per-item UI state
+  // Per-item UI state (deferred blocks)
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Per-task UI state (not important)
+  const [niDeletingId, setNiDeletingId] = useState<string | null>(null);
+  const [niActionLoading, setNiActionLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -53,36 +58,73 @@ export default function DeferredPage() {
       }
       setEmail(user.email ?? null);
 
-      const { data: plans } = await supabase
-        .from("daily_plans")
-        .select("id, date, blocks")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false });
+      const [plansRes, tasksRes] = await Promise.all([
+        supabase
+          .from("daily_plans")
+          .select("id, date, blocks")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false }),
+        supabase
+          .from("tasks")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "not_important")
+          .order("updated_at", { ascending: false }),
+      ]);
 
-      if (!plans) {
-        setLoading(false);
-        return;
-      }
-
-      const extracted: DeferredItem[] = [];
-      for (const plan of plans as Pick<DailyPlan, "id" | "date" | "blocks">[]) {
-        for (const block of plan.blocks) {
-          if (DEFERRED_STATUSES.has(block.status)) {
-            extracted.push({
-              block,
-              original_date: plan.date,
-              plan_id: plan.id,
-            });
+      if (plansRes.data) {
+        const extracted: DeferredItem[] = [];
+        for (const plan of plansRes.data as Pick<DailyPlan, "id" | "date" | "blocks">[]) {
+          for (const block of plan.blocks) {
+            if (DEFERRED_STATUSES.has(block.status)) {
+              extracted.push({
+                block,
+                original_date: plan.date,
+                plan_id: plan.id,
+              });
+            }
           }
         }
+        setItems(extracted);
       }
 
-      // Already sorted by date desc from DB, but stable-sort within same plan
-      setItems(extracted);
+      setNotImportantTasks((tasksRes.data as Task[]) ?? []);
       setLoading(false);
     }
     load();
   }, []);
+
+  async function restoreTask(task: Task) {
+    setNiActionLoading(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "open" }),
+      });
+      if (!res.ok) throw new Error();
+      setNotImportantTasks((prev) => prev.filter((t) => t.id !== task.id));
+      setNiDeletingId(null);
+    } catch {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setNiActionLoading(false);
+    }
+  }
+
+  async function permanentlyDeleteTask(task: Task) {
+    setNiActionLoading(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setNotImportantTasks((prev) => prev.filter((t) => t.id !== task.id));
+      setNiDeletingId(null);
+    } catch {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setNiActionLoading(false);
+    }
+  }
 
   function openReschedule(blockId: string) {
     setReschedulingId(blockId);
@@ -167,15 +209,23 @@ export default function DeferredPage() {
           Nothing here gets deleted unless you delete it. These are tasks KBLOS moved — we still have them.
         </div>
 
+        {/* Deferred blocks section */}
+        <h2
+          className="text-base font-semibold mb-4"
+          style={{ fontFamily: "'DM Sans', sans-serif", color: "#1A1814" }}
+        >
+          Moved from schedule
+        </h2>
+
         {/* Content */}
         {loading ? (
           <p className="text-sm" style={{ color: "#9C9790" }}>Loading…</p>
         ) : items.length === 0 ? (
-          <p className="text-sm" style={{ color: "#9C9790" }}>
+          <p className="text-sm mb-10" style={{ color: "#9C9790" }}>
             Nothing deferred yet. When KBLOS moves a block, it will appear here.
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-3 mb-10">
             {items.map((item) => {
               const isRescheduling = reschedulingId === item.block.id;
               const isDeleting = deletingId === item.block.id;
@@ -331,6 +381,111 @@ export default function DeferredPage() {
               );
             })}
           </ul>
+        )}
+
+        {/* Divider */}
+        {!loading && (
+          <div className="border-t border-[#DDD9CE] my-8" />
+        )}
+
+        {/* Not Important section */}
+        {!loading && (
+          <>
+            <h2
+              className="text-base font-semibold mb-1"
+              style={{ fontFamily: "'DM Sans', sans-serif", color: "#1A1814" }}
+            >
+              Marked not important
+            </h2>
+            <p className="text-xs mb-5" style={{ color: "#9C9790", fontFamily: "'DM Mono', monospace" }}>
+              Was this anxiety, or does it actually need to happen?
+            </p>
+
+            {notImportantTasks.length === 0 ? (
+              <p className="text-sm" style={{ color: "#9C9790" }}>
+                Nothing here. Tasks you dismiss as &ldquo;not important&rdquo; will show up for review.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {notImportantTasks.map((task) => {
+                  const isDeleting = niDeletingId === task.id;
+
+                  return (
+                    <li
+                      key={task.id}
+                      className="rounded-lg border border-[#DDD9CE] px-5 py-4"
+                      style={{ backgroundColor: "#FDFBF7" }}
+                    >
+                      <p
+                        className="font-semibold text-base leading-snug mb-3"
+                        style={{ fontFamily: "'DM Sans', sans-serif", color: "#1A1814" }}
+                      >
+                        {task.title_display}
+                      </p>
+
+                      {!isDeleting && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => restoreTask(task)}
+                            disabled={niActionLoading}
+                            className="text-xs px-3 py-1.5 rounded text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                            style={{ backgroundColor: "#2A5C8C", fontFamily: "'DM Sans', sans-serif" }}
+                          >
+                            {niActionLoading ? "Restoring…" : "Actually needed"}
+                          </button>
+                          <button
+                            onClick={() => setNiDeletingId(task.id)}
+                            disabled={niActionLoading}
+                            className="text-xs px-3 py-1.5 rounded border transition-colors hover:bg-[#EEECE8] disabled:opacity-50"
+                            style={{
+                              borderColor: "#DDD9CE",
+                              color: "#9C9790",
+                              fontFamily: "'DM Sans', sans-serif",
+                            }}
+                          >
+                            Delete for good
+                          </button>
+                        </div>
+                      )}
+
+                      {isDeleting && (
+                        <div className="pt-1">
+                          <p
+                            className="text-sm mb-3"
+                            style={{ color: "#1A1814", fontFamily: "'DM Sans', sans-serif" }}
+                          >
+                            Remove this permanently?
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => permanentlyDeleteTask(task)}
+                              disabled={niActionLoading}
+                              className="text-xs px-3 py-1.5 rounded text-white bg-red-500 transition-opacity hover:opacity-80 disabled:opacity-50"
+                              style={{ fontFamily: "'DM Sans', sans-serif" }}
+                            >
+                              {niActionLoading ? "Deleting…" : "Yes, remove"}
+                            </button>
+                            <button
+                              onClick={() => setNiDeletingId(null)}
+                              disabled={niActionLoading}
+                              className="text-xs px-3 py-1.5 rounded border transition-colors hover:bg-[#EEECE8] disabled:opacity-50"
+                              style={{
+                                borderColor: "#DDD9CE",
+                                color: "#9C9790",
+                                fontFamily: "'DM Sans', sans-serif",
+                              }}
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </AppShell>

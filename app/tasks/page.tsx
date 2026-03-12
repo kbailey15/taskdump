@@ -38,6 +38,7 @@ export default function TasksPage() {
             .from("tasks")
             .select("*")
             .eq("user_id", user.id)
+            .neq("status", "not_important")
             .order("created_at", { ascending: false }),
           fetch("/api/settings"),
         ]);

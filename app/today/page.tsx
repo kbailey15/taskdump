@@ -114,6 +114,11 @@ export default function TodayPage() {
 
   // Toast notification
   const [toast, setToast] = useState<string | null>(null);
+
+  // End of day review state
+  const [showReview, setShowReview] = useState(false);
+  const [reflection, setReflection] = useState("");
+  const [reviewBlockStatuses, setReviewBlockStatuses] = useState<Record<string, "deferred" | "dropped">>({});
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -122,6 +127,7 @@ export default function TodayPage() {
   const isViewingToday = viewDate === todayStr;
   const viewDateLabel = getDateLabel(viewDate);
   const showTomorrowNudge = isViewingToday && currentMinutes >= 18 * 60 && tomorrowPlanExists === false;
+  const showEodBanner = isViewingToday && currentMinutes >= 18 * 60;
 
   // Load user on mount
   useEffect(() => {
@@ -503,6 +509,39 @@ export default function TodayPage() {
     localStorage.setItem(NUDGE_KEY, Date.now().toString());
   }
 
+  async function handleSaveReview() {
+    if (!plan) return;
+    const deferredCount = Object.values(reviewBlockStatuses).filter(s => s === "deferred").length;
+    const updatedBlocks = plan.blocks.map((b) => {
+      const newStatus = reviewBlockStatuses[b.id];
+      if (newStatus === "deferred") return { ...b, status: "deferred" as const };
+      if (newStatus === "dropped") return { ...b, status: "dropped" as const };
+      return b;
+    });
+    const res = await fetch("/api/plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: plan.date,
+        blocks: updatedBlocks,
+        edit_log: plan.edit_log ?? [],
+        review: {
+          reflection,
+          reviewed_at: new Date().toISOString(),
+          deferred_count: deferredCount,
+        },
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setPlan(data.plan);
+      showToast("Day reviewed ✓");
+      setShowReview(false);
+      setReflection("");
+      setReviewBlockStatuses({});
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -624,6 +663,112 @@ export default function TodayPage() {
                 Regenerate
               </button>
             </div>
+
+            {/* EOD review banner — shown after 6pm when viewing today */}
+            {showEodBanner && !showReview && (
+              <button
+                onClick={() => setShowReview(true)}
+                className="w-full mb-4 text-left bg-[#F5EDD0] border border-[#D4A84B] rounded-lg px-4 py-3 text-sm text-[#7A6830] cursor-pointer"
+              >
+                Ready to close out today? → Review your day
+              </button>
+            )}
+
+            {/* EOD review panel */}
+            {showReview && (
+              <div className="mb-4 p-5 bg-[#FDFBF7] border border-[#DDD9CE] rounded-lg">
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "22px", color: "#1A1814" }} className="mb-4">
+                  Day Review
+                </h2>
+
+                {/* Completed section */}
+                <div className="mb-4">
+                  <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>
+                    Completed
+                  </p>
+                  {plan.blocks.filter(b => b.status === "completed").length === 0 ? (
+                    <p className="text-sm" style={{ color: "#9C9790" }}>None yet</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {plan.blocks.filter(b => b.status === "completed").map(b => (
+                        <p key={b.id} className="text-sm" style={{ color: "#1A1814" }}>{b.title}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Didn't finish section */}
+                <div className="mb-4">
+                  <p className="uppercase tracking-widest mb-2" style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#9C9790" }}>
+                    Didn&apos;t finish
+                  </p>
+                  {plan.blocks.filter(b => b.status === "pending" || b.status === "skipped").length === 0 ? (
+                    <p className="text-sm" style={{ color: "#9C9790" }}>All done!</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {plan.blocks.filter(b => b.status === "pending" || b.status === "skipped").map(b => {
+                        const localStatus = reviewBlockStatuses[b.id];
+                        return (
+                          <div key={b.id} className="flex items-center justify-between gap-3">
+                            <p className="text-sm flex-1 min-w-0 truncate" style={{ color: "#1A1814" }}>{b.title}</p>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => setReviewBlockStatuses(prev => ({ ...prev, [b.id]: "deferred" }))}
+                                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                  localStatus === "deferred"
+                                    ? "bg-[#D4A84B] border-[#D4A84B] text-white"
+                                    : "border-[#DDD9CE] text-[#9C9790] hover:border-[#D4A84B] hover:text-[#7A6830]"
+                                }`}
+                              >
+                                Defer to tomorrow
+                              </button>
+                              <button
+                                onClick={() => setReviewBlockStatuses(prev => ({ ...prev, [b.id]: "dropped" }))}
+                                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                  localStatus === "dropped"
+                                    ? "bg-[#9C9790] border-[#9C9790] text-white"
+                                    : "border-[#DDD9CE] text-[#9C9790] hover:border-[#9C9790]"
+                                }`}
+                              >
+                                Drop it
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Reflection */}
+                <div className="mb-4">
+                  <textarea
+                    value={reflection}
+                    onChange={(e) => setReflection(e.target.value)}
+                    placeholder="One line — what moved today?"
+                    rows={2}
+                    className="w-full text-sm border border-[#DDD9CE] rounded-lg px-3 py-2 bg-[#F4F1EC] text-[#1A1814] placeholder-[#9C9790] focus:outline-none focus:border-[#2A5C8C] transition-colors resize-none"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveReview}
+                    className="flex-1 py-2 bg-[#1A1814] text-[#F4F1EC] text-sm font-medium rounded-lg hover:bg-[#333] transition-colors"
+                  >
+                    Save &amp; close day
+                  </button>
+                  <button
+                    onClick={() => setShowReview(false)}
+                    className="px-4 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: "#9C9790" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Regenerate confirm panel */}
             {showRegenConfirm && (

@@ -99,7 +99,7 @@ export type PlanBlockType =
   | "commitment"
   | "personal_growth";
 
-export type PlanBlockStatus = "pending" | "completed" | "skipped";
+export type PlanBlockStatus = "pending" | "completed" | "skipped" | "deferred" | "dropped";
 
 export interface PlanBlock {
   id: string;

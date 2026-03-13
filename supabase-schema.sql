@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
   duration        text,
   current_steps   text,
   status          text NOT NULL DEFAULT 'open'
-                    CHECK (status IN ('open', 'in_progress', 'waiting', 'completed')),
+                    CHECK (status IN ('open', 'in_progress', 'waiting', 'completed', 'not_important')),
   next_steps      text,
   notes           text,
   updates         jsonb NOT NULL DEFAULT '[]',

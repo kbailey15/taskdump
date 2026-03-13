@@ -83,7 +83,8 @@ const NUDGE_KEY = "late_edit_nudge_dismissed";
 const NUDGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export default function TodayPage() {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const _now = new Date();
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
   const tomorrowStr = offsetDate(todayStr, 1);
 
   const [viewDate, setViewDate] = useState(todayStr);
@@ -185,7 +186,8 @@ export default function TodayPage() {
   // If the last 3 days all have at least one late edit and the nudge
   // hasn't been recently dismissed, show a gentle schedule-review prompt.
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const _n = new Date();
+    const today = `${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, "0")}-${String(_n.getDate()).padStart(2, "0")}`;
     if (viewDate !== today) return;
 
     const dismissed = localStorage.getItem(NUDGE_KEY);

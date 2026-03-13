@@ -119,7 +119,7 @@ export default function TodayPage() {
   // End of day review state
   const [showReview, setShowReview] = useState(false);
   const [reflection, setReflection] = useState("");
-  const [reviewBlockStatuses, setReviewBlockStatuses] = useState<Record<string, "deferred" | "dropped">>({});
+  const [reviewBlockStatuses, setReviewBlockStatuses] = useState<Record<string, "complete" | "deferred" | "dropped">>({});
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -516,6 +516,7 @@ export default function TodayPage() {
     const deferredCount = Object.values(reviewBlockStatuses).filter(s => s === "deferred").length;
     const updatedBlocks = plan.blocks.map((b) => {
       const newStatus = reviewBlockStatuses[b.id];
+      if (newStatus === "complete") return { ...b, status: "complete" as const };
       if (newStatus === "deferred") return { ...b, status: "deferred" as const };
       if (newStatus === "dropped") return { ...b, status: "dropped" as const };
       return b;
@@ -714,6 +715,16 @@ export default function TodayPage() {
                           <div key={b.id} className="flex items-center justify-between gap-3">
                             <p className="text-sm flex-1 min-w-0 truncate" style={{ color: "#1A1814" }}>{b.title}</p>
                             <div className="flex gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => setReviewBlockStatuses(prev => ({ ...prev, [b.id]: "complete" }))}
+                                className={`text-xs px-3 py-1 rounded-md border transition-colors ${
+                                  localStatus === "complete"
+                                    ? "bg-[#3A7D52] text-white border-[#3A7D52]"
+                                    : "bg-[#D8EDDF] text-[#3A7D52] border border-[#3A7D52]/20"
+                                }`}
+                              >
+                                Done ✓
+                              </button>
                               <button
                                 onClick={() => setReviewBlockStatuses(prev => ({ ...prev, [b.id]: "deferred" }))}
                                 className={`text-xs px-2 py-1 rounded border transition-colors ${

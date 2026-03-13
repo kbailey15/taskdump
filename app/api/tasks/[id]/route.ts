@@ -33,6 +33,7 @@ export async function PATCH(
 
   try {
     body = await request.json();
+    console.log("[tasks/[id]] PATCH incoming body:", body);
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }

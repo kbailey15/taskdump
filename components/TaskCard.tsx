@@ -86,14 +86,20 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
 
   async function dismissAsNotImportant(taskId: string) {
     setDismissing(true);
+    const requestBody = { status: "not_important" };
+    console.log("[TaskCard] dismissAsNotImportant — taskId:", taskId, "body:", requestBody);
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "not_important" }),
+      body: JSON.stringify(requestBody),
     });
     if (res.ok) {
+      const data = await res.json();
+      console.log("[TaskCard] dismissAsNotImportant — success, status:", res.status, "response:", data);
       onDelete?.(taskId);
     } else {
+      const errText = await res.text();
+      console.log("[TaskCard] dismissAsNotImportant — failure, status:", res.status, "response:", errText);
       setDismissing(false);
     }
   }

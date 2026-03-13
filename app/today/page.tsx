@@ -512,7 +512,8 @@ export default function TodayPage() {
   }
 
   async function handleSaveReview() {
-    if (!plan) return;
+    console.log("handleSaveReview called");
+    if (!plan) { console.log("handleSaveReview: plan is null, returning"); return; }
     const deferredCount = Object.values(reviewBlockStatuses).filter(s => s === "deferred").length;
     const updatedBlocks = plan.blocks.map((b) => {
       const newStatus = reviewBlockStatuses[b.id];
@@ -521,27 +522,36 @@ export default function TodayPage() {
       if (newStatus === "dropped") return { ...b, status: "dropped" as const };
       return b;
     });
-    const res = await fetch("/api/plans", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: plan.date,
-        blocks: updatedBlocks,
-        edit_log: plan.edit_log ?? [],
-        review: {
-          reflection,
-          reviewed_at: new Date().toISOString(),
-          deferred_count: deferredCount,
-        },
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setPlan(data.plan);
-      showToast("Day reviewed ✓");
-      setShowReview(false);
-      setReflection("");
-      setReviewBlockStatuses({});
+    try {
+      const res = await fetch("/api/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: plan.date,
+          blocks: updatedBlocks,
+          edit_log: plan.edit_log ?? [],
+          review: {
+            reflection,
+            reviewed_at: new Date().toISOString(),
+            deferred_count: deferredCount,
+          },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlan(data.plan);
+        showToast("Day reviewed ✓");
+        setShowReview(false);
+        setReflection("");
+        setReviewBlockStatuses({});
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error("handleSaveReview: API error", res.status, errData);
+        showToast("Failed to save review");
+      }
+    } catch (err) {
+      console.error("handleSaveReview: fetch threw", err);
+      showToast("Failed to save review");
     }
   }
 

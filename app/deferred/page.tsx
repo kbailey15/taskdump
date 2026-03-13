@@ -88,6 +88,7 @@ export default function DeferredPage() {
         setItems(extracted);
       }
 
+      console.log("[deferred] notImportant raw data:", tasksRes.data, "error:", tasksRes.error);
       setNotImportantTasks((tasksRes.data as Task[]) ?? []);
       setLoading(false);
     }

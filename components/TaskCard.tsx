@@ -4,23 +4,12 @@ import { useState } from "react";
 import { Task, TaskStatus } from "@/types";
 import EditTaskModal from "./EditTaskModal";
 
-const STATUS_CYCLE: TaskStatus[] = ["open", "in_progress", "waiting", "completed"];
-
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  open: "bg-gray-100 text-gray-700 hover:bg-gray-200",
-  in_progress: "bg-blue-100 text-blue-700 hover:bg-blue-200",
-  waiting: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
-  completed: "bg-green-100 text-green-700 hover:bg-green-200",
-  not_important: "bg-gray-50 text-gray-400 hover:bg-gray-100",
-};
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  open: "open",
-  in_progress: "in progress",
-  waiting: "waiting",
-  completed: "done",
-  not_important: "not important",
-};
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: "open", label: "Open" },
+  { value: "in_progress", label: "In progress" },
+  { value: "waiting", label: "Waiting on a step" },
+  { value: "completed", label: "Done" },
+];
 
 function getDueDateMeta(dueDate: string | null): {
   label: string;
@@ -63,9 +52,9 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
   const [deleting, setDeleting] = useState(false);
   const [dismissing, setDismissing] = useState(false);
 
-  async function cycleStatus() {
-    const next =
-      STATUS_CYCLE[(STATUS_CYCLE.indexOf(status) + 1) % STATUS_CYCLE.length];
+  async function changeStatus(next: TaskStatus) {
+    if (next === status) return;
+    const prev = status;
     setSaving(true);
     setStatus(next);
 
@@ -79,7 +68,7 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
       const data = await res.json();
       onStatusChange?.(data.task);
     } else {
-      setStatus(status);
+      setStatus(prev);
     }
     setSaving(false);
   }
@@ -132,14 +121,22 @@ export default function TaskCard({ task, onStatusChange, onEdit, onDelete }: Tas
           >
             {task.title}
           </h3>
-          <button
-            onClick={cycleStatus}
+          <select
+            value={status}
+            onChange={(e) => changeStatus(e.target.value as TaskStatus)}
             disabled={saving}
-            title="Click to cycle status"
-            className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium transition-colors cursor-pointer disabled:cursor-wait ${STATUS_COLORS[status]}`}
+            className="shrink-0 text-xs px-2 py-0.5 rounded border appearance-none cursor-pointer disabled:cursor-wait focus:outline-none focus:border-[#2A5C8C]"
+            style={{
+              backgroundColor: "#FDFBF7",
+              color: "#1A1814",
+              borderColor: "#DDD9CE",
+              fontFamily: "'DM Mono', monospace",
+            }}
           >
-            {STATUS_LABELS[status]}
-          </button>
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
 
         {dueMeta && (

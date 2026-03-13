@@ -23,6 +23,12 @@ export default function TasksPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }
 
   useEffect(() => {
     async function load() {
@@ -59,6 +65,7 @@ export default function TasksPage() {
 
   function handleUpdatedTask(updated: Task) {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    showToast("Task updated");
   }
 
   function handleDeleteTask(id: string) {
@@ -208,6 +215,12 @@ export default function TasksPage() {
           />
         </section>
       </main>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1814] text-[#F4F1EC] text-sm px-4 py-2 rounded-lg shadow-lg pointer-events-none">
+          {toast}
+        </div>
+      )}
     </AppShell>
   );
 }

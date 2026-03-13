@@ -516,7 +516,7 @@ export default function TodayPage() {
     const deferredCount = Object.values(reviewBlockStatuses).filter(s => s === "deferred").length;
     const updatedBlocks = plan.blocks.map((b) => {
       const newStatus = reviewBlockStatuses[b.id];
-      if (newStatus === "complete") return { ...b, status: "complete" as const };
+      if (newStatus === "complete") return { ...b, status: "completed" as const };
       if (newStatus === "deferred") return { ...b, status: "deferred" as const };
       if (newStatus === "dropped") return { ...b, status: "dropped" as const };
       return b;
